@@ -5,13 +5,16 @@ import numpy as np
 from db import Database
 from my_binance import *
 import telebot
-
-channel_id = "-1001702093331"  # The channel ID starts with a - and is followed by the channel's unique ID
-bot = telebot.bot = telebot.TeleBot(token="5202575933:AAF-q7yxh_EyQBqsYtiuIViIFUHh27SFY0A")
-db = Database('database .db')
+print('Start_v2.0')
+tg_chanel_user = 634713845
+bot = telebot.bot = telebot.TeleBot(token='5202575933:AAF-q7yxh_EyQBqsYtiuIViIFUHh27SFY0A')
+channel_id = "-1001702093331"
+db = Database('database.db')
 def point_calculation(balance, procent, price):
     enter_usdt = float(balance) * procent / 100
-    result = round(enter_usdt  * 30 / price, 3)
+    result = round(enter_usdt / price, 3)
+    if result < 0.001:
+        result = 0.001
     return result
 
 
@@ -63,30 +66,36 @@ def enter_position(border, user_id):
             if profit_pricent >= 2:
                 key = db.get_api_key(user_id)
                 secret = db.get_secret_key(user_id)
-                db.set_position(user_id, position, 'SHORT')
                 balance = balance_binance(key, secret)[0]
                 qwot = point_calculation(balance, procent, border[2])
-                open_order(key, secret, qwot, 'SELL', 'MARKET')
-                histori = histori_traid(key, secret)[-1]
-                bot.send_message(chat_id=user_id,
-                                 text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
-                if user_id == 871610428:
-                    bot.send_message(chat_id=channel_id,
+                res = open_order(key, secret, qwot, 'SELL', 'MARKET')
+                if type(res) is str:
+                    bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
+                else:
+                    histori = histori_traid(key, secret)[-1]
+                    bot.send_message(chat_id=user_id,
                                      text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
+                    if user_id == tg_chanel_user:
+                        bot.send_message(chat_id=channel_id,
+                                         text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
+                    db.set_position(user_id, position, 'SHORT')
         else:
             key = db.get_api_key(user_id)
             secret = db.get_secret_key(user_id)
-            db.set_position(user_id, position, 'SHORT')
+
             balance = balance_binance(key, secret)[0]
             qwot = point_calculation( balance, procent, border[2])
-            open_order(key, secret, qwot, 'SELL', 'MARKET')
-            histori = histori_traid(key, secret)[-1]
-            bot.send_message(chat_id=user_id,
-                             text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
-            if user_id == 871610428:
-                bot.send_message(chat_id=channel_id,
+            res = open_order(key, secret, qwot, 'SELL', 'MARKET')
+            if type(res) is str:
+                bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
+            else:
+                histori = histori_traid(key, secret)[-1]
+                bot.send_message(chat_id=user_id,
                                  text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
-
+                if user_id == tg_chanel_user:
+                    bot.send_message(chat_id=channel_id,
+                                     text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
+                db.set_position(user_id, position, 'SHORT')
     elif border[2] < border[1] and db.get_position(user_id,  position) != 'LONG': # вход позиция Long
         if db.get_profit_2(user_id) == 'ON':
 
@@ -96,29 +105,35 @@ def enter_position(border, user_id):
                 secret = db.get_secret_key(user_id)
                 balance = balance_binance(key, secret)[0]
                 qwot = point_calculation(balance, procent, border[2])
-                open_order(key, secret, qwot, 'BUY', 'MARKET')
-                histori = histori_traid(key, secret)[-1]
-                bot.send_message(chat_id=user_id,
-                                 text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
-                if user_id == 871610428:
-                    bot.send_message(chat_id=channel_id,
+                res = open_order(key, secret, qwot, 'BUY', 'MARKET')
+                if type(res) is str:
+                    bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
+                else:
+                    histori = histori_traid(key, secret)[-1]
+                    bot.send_message(chat_id=user_id,
                                      text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
-
+                    if user_id == tg_chanel_user:
+                        bot.send_message(chat_id=channel_id,
+                                         text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
+                db.set_position(user_id, position, 'LONG')
         else:
 
-            db.set_position(user_id, position, 'LONG')
+
             key = db.get_api_key(user_id)
             secret = db.get_secret_key(user_id)
             balance = balance_binance(key, secret)[0]
             qwot = point_calculation(balance, procent, border[2])
-            open_order(key, secret, qwot, 'BUY', 'MARKET')
-            histori = histori_traid(key, secret)[-1]
-            bot.send_message(chat_id=user_id,
-                             text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
-            if user_id == 871610428:
-                bot.send_message(chat_id=channel_id,
+            res = open_order(key, secret, qwot, 'BUY', 'MARKET')
+            if type(res) is str:
+                bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
+            else:
+                histori = histori_traid(key, secret)[-1]
+                bot.send_message(chat_id=user_id,
                                  text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
-
+                if user_id == tg_chanel_user:
+                    bot.send_message(chat_id=channel_id,
+                                     text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
+                db.set_position(user_id, position, 'LONG')
 
 def main():
 

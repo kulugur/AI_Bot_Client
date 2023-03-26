@@ -436,7 +436,7 @@ async def Tester(message: types.Message):
             await bot.send_message(message.from_user.id, f'У вас уже подключена подписка {subscription}')
     else:
         col_tester = db.get_oll_subscription('Tester')
-        if len(col_tester) >= 1:
+        if len(col_tester) >= 10:
             if db.get_language(message.from_user.id) == 'eng':
                 await bot.send_message(message.from_user.id, f'Maximum limit of testers exceeded\n')
             else:

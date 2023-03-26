@@ -6,8 +6,8 @@ from binance.um_futures import UMFutures
 
 from binance.error import ClientError
 
-key ='qB2CzYEwUt56FYY0rhchejUEs6F0WacSvMfdmmFOoJBEsUsM06QqAJipDuZM2ZSZ'
-secret= 'qyeRSnnnDqI6bIUCVYnsu2Ai7V5n3FIaHmmCp7Ft9vQ0mEs3PEntkyIDbQB9CUS3'
+key ='GyvAV7Mqrcww6jsmKkJaaF6INUgMbluM4ydxyiFHE3ioOE87Seym1xJWW3u98AHR'
+secret= 'VOmu6fEU4ecqMQOJvXmwAzx64E8yOmpmuQDdtjatV2yoxZbzznLFHNs9hRtnakbV'
 
 def get_status_aip(key, secret):
     um_futures_client = UMFutures(key=key, secret=secret)
@@ -106,8 +106,10 @@ def open_order(key, secret, quantity, side, types):
         return error.args[2]
 
 
-print(balance_binance(key, secret))
-#open_order(key, secret, 0.001,  'SELL', 'MARKET')
+#print(balance_binance(key, secret))
+# print()
+# if type(open_order(key, secret, 0.001,  'BUE', 'MARKET')) is str:
+#     print('da')
 #open_order(key, secret, 22350.8, 0.001,  'BUY', 'STOP')
 #close_order(key, secret)
 #print(histori_traid(key, secret)[-1]) #История
