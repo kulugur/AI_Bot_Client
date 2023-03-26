@@ -3,6 +3,8 @@ import json
 import time
 
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import InputFile
+
 import markups as nav
 from db import Database
 from binance.um_futures import UMFutures
@@ -364,6 +366,7 @@ async def bot_masege(message: types.Message):
             elif db.get_signup(message.from_user.id) == 'key_reg':
                 db.set_api_key(message.from_user.id, message.text)
                 db.set_signup(message.from_user.id, 'secret_key_reg')
+
                 if db.get_language(message.from_user.id) == 'eng':
                     await bot.send_message(message.from_user.id, 'API Key successfully saved')
                     await bot.send_message(message.from_user.id, 'Enter Secret Key')
@@ -682,6 +685,16 @@ async def PuyClose_lait_premium(message: types.Message):
 @dp.callback_query_handler(text='reg_api')
 async def PuyClose_lait_premium(message: types.Message):
     db.set_signup(message.from_user.id, 'key_reg')
+    media = types.MediaGroup()
+    media.attach_photo(types.InputFile('image/1.png', 'Reg_API'))
+    media.attach_photo(types.InputFile('image/2.png', 'Reg_API'))
+    media.attach_photo(types.InputFile('image/3.png', 'Reg_API'))
+    media.attach_photo(types.InputFile('image/4.png', 'Reg_API'))
+    #media = [types.InputMediaPhoto('image/1.png', 'Reg_API'), types.InputMediaPhoto('image/1.png'), types.InputMediaPhoto('image/1.png'), types.InputMediaPhoto('image/1.png')]  # Показываем, где фото и как её подписать
+
+    await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
+
+    #await bot.send_photo(message.from_user.id, photo)
     if db.get_language(message.from_user.id) == 'eng':
         await bot.send_message(message.from_user.id, f'Enter API Key:')
     else:
