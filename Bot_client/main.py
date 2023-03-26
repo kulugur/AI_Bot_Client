@@ -292,7 +292,7 @@ async def bot_masege(message: types.Message):
             await bot.send_message(message.from_user.id, '🛑')
             if db.get_start(message.from_user.id):
                 if db.get_subscription(message.from_user.id) != 'Light':
-
+                    db.set_start(message.from_user.id, False)
 
                     with open('data.txt') as json_file:
                         data = json.load(json_file)
@@ -300,7 +300,7 @@ async def bot_masege(message: types.Message):
 
                     with open('data.txt', 'w') as outfile:
                         json.dump(data, outfile)
-                    db.set_start(message.from_user.id, False)
+
 
                     #db.set_position_balance(message.from_user.id, 0.0)
                     # db.set_position(message.from_user.id, 'position_1m', 'non')
