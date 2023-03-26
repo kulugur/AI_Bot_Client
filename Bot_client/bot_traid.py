@@ -39,7 +39,7 @@ def get_border(interval):
 
     return float(upper), float(lower), last_price, interval
 
-def enter_position(border, user_id):
+def enter_position(border, user_id, data):
     interval = border[3]
     if interval == '1m':
         procent = 20
@@ -76,7 +76,8 @@ def enter_position(border, user_id):
                     bot.send_message(chat_id=user_id,
                                      text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                     if user_id == tg_chanel_user:
-                        bot.send_message(chat_id=channel_id,
+                        for id in data:
+                            bot.send_message(chat_id=id,
                                          text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                     db.set_position(user_id, position, 'SHORT')
         else:
@@ -93,7 +94,8 @@ def enter_position(border, user_id):
                 bot.send_message(chat_id=user_id,
                                  text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                 if user_id == tg_chanel_user:
-                    bot.send_message(chat_id=channel_id,
+                    for id in data:
+                        bot.send_message(chat_id=id,
                                      text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                 db.set_position(user_id, position, 'SHORT')
     elif border[2] < border[1] and db.get_position(user_id,  position) != 'LONG': # вход позиция Long
@@ -113,7 +115,8 @@ def enter_position(border, user_id):
                     bot.send_message(chat_id=user_id,
                                      text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                     if user_id == tg_chanel_user:
-                        bot.send_message(chat_id=channel_id,
+                        for id in data:
+                            bot.send_message(chat_id=id,
                                          text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                 db.set_position(user_id, position, 'LONG')
         else:
@@ -131,7 +134,8 @@ def enter_position(border, user_id):
                 bot.send_message(chat_id=user_id,
                                  text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                 if user_id == tg_chanel_user:
-                    bot.send_message(chat_id=channel_id,
+                    for id in data:
+                        bot.send_message(chat_id=id,
                                      text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}')
                 db.set_position(user_id, position, 'LONG')
 
@@ -148,14 +152,15 @@ def main():
     with open('data.txt') as json_file:
         data = json.load(json_file)
         alluser_id = data['user_id']
-
+    with open('data2.txt') as json_file:
+        data = json.load(json_file)
     for user_id in alluser_id :
-        enter_position(border_1m, user_id)
-        enter_position(border_5m, user_id)
-        enter_position(border_15m, user_id)
-        enter_position(border_30m, user_id)
-        enter_position(border_1h, user_id)
-        enter_position(border_4h, user_id)
+        enter_position(border_1m, user_id, data)
+        enter_position(border_5m, user_id, data)
+        enter_position(border_15m, user_id, data)
+        enter_position(border_30m, user_id, data)
+        enter_position(border_1h, user_id, data)
+        enter_position(border_4h, user_id, data)
 
     time.sleep(3)
 
