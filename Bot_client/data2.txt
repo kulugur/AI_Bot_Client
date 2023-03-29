@@ -1,1 +1,1 @@
-[{"user_id": "5612997951", "position_1m": "", "position_5m": "", "position_15m": [24051.8, -0.10099999999999999], "position_30m": [24055.6, -0.157], "position_1h": "", "position_4h": "", "close": ""}]
+[]

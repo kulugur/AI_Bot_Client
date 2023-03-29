@@ -11,7 +11,7 @@ from binance.um_futures import UMFutures
 from my_binance import balance_binance
 
 from binance.error import ClientError
-
+tg_chanel_user = 871610428
 admin = [871610428]
 
 users = [871610428, 634713845, -1001877258339]
@@ -249,7 +249,11 @@ async def bot_masege(message: types.Message):
             if not db.get_start(message.from_user.id):
                 if db.get_subscription(message.from_user.id) != 'Light':
                     try:
-                        test = balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id))
+                        if message.from_user.id == tg_chanel_user:
+                            url = 'https://testnet.binancefuture.com'
+                        else:
+                            url = 'https://api.binance.com'
+                        test = balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id), url)
                     except:
                         test = 'error'
                     if test == 'error':
@@ -263,9 +267,9 @@ async def bot_masege(message: types.Message):
                         db.set_binance_balance(message.from_user.id, test[0])
                         if db.get_language(message.from_user.id) == 'eng':
 
-                            await bot.send_message(message.from_user.id, f'The trading bot is running!\nParameters:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nExchange balance: {balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id))}')
+                            await bot.send_message(message.from_user.id, f'The trading bot is running!\nParameters:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nExchange balance: {balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id), url)}')
                         else:
-                            await bot.send_message(message.from_user.id, f'Торговый бот запущен!\nПараметры:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nБаланс биржы: {balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id))}')
+                            await bot.send_message(message.from_user.id, f'Торговый бот запущен!\nПараметры:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nБаланс биржы: {balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id), url)}')
                         db.set_start(message.from_user.id, True)
                         with open('data.txt') as json_file:
                             data = json.load(json_file)
