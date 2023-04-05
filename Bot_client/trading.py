@@ -1,32 +1,32 @@
-
 import time
 import json
 from binance.um_futures import UMFutures
 import numpy as np
-
-# Initialize the Binance client
-client = UMFutures()
-symbol = 'BTCUSDT'
-interval = '1m'
-#channel_id = "871610428"  # The channel ID starts with a - and is followed by the channel's unique ID
+from db import Database
+from my_binance import *
 import telebot
+from config import *
+import asyncio
 
-bot = telebot.bot = telebot.TeleBot(token="5202575933:AAF-q7yxh_EyQBqsYtiuIViIFUHh27SFY0A")
-# Initialize the Telegram bot
+print('Start_v2.0')
+
+bot = telebot.bot = telebot.TeleBot(token=TOKEN)
+channel_id = "-1001702093331"
+db = Database('database.db')
 
 
-# Set the channel ID
-#channel_id = [5612997951]  # The channel ID starts with a - and is followed by the channel's unique ID
+def point_calculation(balance, procent, price):
+    enter_usdt = float(balance) * procent / 100
+    result = round(enter_usdt / price, 3)
+    if result < 0.001:
+        result = 0.001
+    return result
 
 
-# Send the message
-
-print('Start')
-def channel_enter(client, interval,PROFIT_FLAG,FLAG, enter):
-    # Set the trading pair, amount, leverage and period
+def get_border(interval):
+    # Initialize the Binance client
+    client = UMFutures()
     symbol = 'BTCUSDT'
-    amount = 1
-    leverage = 125
 
     # Fetch historical data
     ohlcv = client.klines("BTCUSDT", interval, limit=500)
@@ -38,97 +38,113 @@ def channel_enter(client, interval,PROFIT_FLAG,FLAG, enter):
     std = np.std(closes, dtype=float)
     upper = sma + 2 * std
     lower = sma - 2 * std
-    with open('data.txt') as json_file:
-        data = json.load(json_file)
-        channel_id = data['user_id']
 
-
-    print(channel_id)
-    # Get the current ticker price
     ticker = client.ticker_price(symbol)
     last_price = float(ticker['price'])
-    #print(upper, interval)
-    #print(lower, interval)
-    profit_pricent = (upper/lower * 100) - 100
-    profit = 0
-    # Implement the strategy
-    if last_price > upper and FLAG != 'short' and profit_pricent >= 2:
-        if PROFIT_FLAG:
-            for i in channel_id:
-                bot.send_message(chat_id=i,
-                              text=f'Closing price {interval}\n{last_price}\n Profit {last_price - enter}')
-            #print(f'Closing price {last_price}\n Profit { last_price - enter}')
-            profit = last_price - enter
-            FLAG = None
 
-        FLAG = 'short'
-        #print("Продано по", last_price, "так как выше верхней границы канала")
-        enter = last_price
-        for i in channel_id:
-            bot.send_message(chat_id=i, text=f"Position enter {interval}\n {enter}\n SHORT")
-        PROFIT_FLAG = True
+    return float(upper), float(lower), last_price
+
+def message_all_users(text):  # отправка сообшения всем пользователям
+    with open('data2.txt') as json_file:
+        data2 = json.load(json_file)
+    for user_id in data2:
+        try:
+
+            bot.send_message(chat_id=user_id['user_id'],
+                             text=text)
+        except:
+            print(user_id['user_id'])
+
+async def enter_position(user_id):
+    interval = ['1m', '5m', '15m', '30m', '1h', '4h']
+    for i in interval:
+        border = get_border(i)
+        if i == '1m':
+            procent = 2
+            position_interval = 'position_1m'
+        elif i == '5m':
+            procent = 2
+            position_interval = 'position_5m'
+        elif i == '15m':
+            procent = 3
+            position_interval = 'position_15m'
+        elif i == '30m':
+            procent = 4
+            position_interval = 'position_30m'
+        elif i == '1h':
+            procent = 6
+            position_interval = 'position_1h'
+        elif i == '4h':
+            procent = 7
+            position_interval = 'position_4h'
+        if user_id == tg_chanel_user:
+            url = 'https://testnet.binancefuture.com'
+        else:
+            url = 'https://fapi.binance.com'
+
+        profit_pricent = (border[0] / border[1] * 100) - 100
+
+        if border[2] > border[0] and db.get_position(user_id, position_interval) != 'SHORT':  # вход позиция short
+            if db.get_profit_2(user_id) == 'ON':
+                if profit_pricent >= 2:
+                    await enter_binance(user_id, url, procent, border, position_interval, 'SHORT')
+            else:
+                await enter_binance(user_id, url, procent, border, position_interval, 'SHORT')
+
+        elif border[2] < border[1] and db.get_position(user_id, position_interval) != 'LONG':  # вход позиция Long
+            if db.get_profit_2(user_id) == 'ON':
+                if profit_pricent >= 2:
+                    await enter_binance(user_id, url, procent, border, position_interval, 'LONG')
+            else:
+                await enter_binance(user_id, url, procent, border, position_interval, 'LONG')
+
+
+
+async def enter_binance(user_id, url, procent, border, position_interval, position):  # вход по рынку Binance
+    try:
+        if position == 'SHORT':
+            size = 'SELL'
+        else:
+            size = 'BUY'
+        key = db.get_api_key(user_id)
+        secret = db.get_secret_key(user_id)
+        position_my = get_position(key, secret, url)
+        balance = balance_binance(key, secret, url)[0]
+        qwot = point_calculation(balance, procent, border[2])
+        res = open_order(key, secret, qwot, size, 'MARKET', url)
+        db.set_position(user_id, position_interval, position)
+        if type(res) is str:
+            bot.send_message(chat_id=user_id, text=f'{position}: {qwot}\nERROR: {res}')
+        else:
+            await asyncio.sleep(5)
+            orders = histori_traid(key, secret, url)[-1]
+
+            bot.send_message(chat_id=user_id,
+                             text=f'{position}:\nBTC: {orders["qty"]}\nPrice: {orders["price"]}\nCommission: {orders["commission"]}\nBalance: {balance}\n\n{position_my[0]}\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
+            if user_id == tg_chanel_user:
+                message_all_users(f'{position}:\nBTC: {orders["qty"]}\nPrice: {orders["price"]}\nCommission: {orders["commission"]}\nBalance: {balance}\n\n{position_my[0]}\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
+    except:
+        bot.send_message(chat_id=user_id, text=f'{position}: {qwot}\nERROR:')
+        return 'error'
 
 
 
 
-    elif last_price < lower and  FLAG != 'long' and profit_pricent >= 2:
-        if PROFIT_FLAG:
-            for i in channel_id:
-                bot.send_message(chat_id=i,
-                              text=f'Closing price {interval}\n{last_price}\nProfit {enter - last_price}')
-            #print(f'Closing price {interval}\n{last_price}\n Profit {enter - last_price}')
-            profit = enter - last_price
-            FLAG = None
 
-        FLAG = 'long'
-        #print("Куплен по цене", last_price, "так как ниже нижней границы канала")
-        enter = last_price
-        for i in channel_id:
-            bot.send_message(chat_id=i, text=f"Position enter{interval}\n{enter}\n LONG")
-        PROFIT_FLAG = True
-
-    #else:
-    #
-    #   say_text(f'Ничего не делаем. Последняя цена",{last_price}, "находится в границах канала')
-    #  print("Ничего не делаем. Последняя цена", last_price, "находится в границах канала")
-    return profit, PROFIT_FLAG, FLAG, enter
-
-def main():
-    FLAG = [None, None, None, None,]
-    PROFIT_FLAG = [None, None, None, None,]
-    total_profit = 0
-    ol_profit = 0
-    enter = [0, 0, 0, 0]
-
+async def main():
     while True:
         try:
-            profit_t1 = channel_enter(client, '1m',PROFIT_FLAG[0],FLAG[0], enter[0])
-            profit_t15 = channel_enter(client, '15m', PROFIT_FLAG[1], FLAG[1], enter[1])
-            profit_t1h = channel_enter(client, '1h', PROFIT_FLAG[2], FLAG[2], enter[2])
-            profit_t4h = channel_enter(client, '4h', PROFIT_FLAG[3], FLAG[3], enter[3])
-            total_profit += profit_t1[0] + profit_t15[0] + profit_t1h[0] + profit_t4h[0]
-            PROFIT_FLAG[0] = profit_t1[1]
-            PROFIT_FLAG[1] = profit_t15[1]
-            PROFIT_FLAG[2] = profit_t1h[1]
-            PROFIT_FLAG[3] = profit_t4h[1]
-            FLAG[0] = profit_t1[2]
-            FLAG[1] = profit_t15[2]
-            FLAG[2] = profit_t1h[2]
-            FLAG[3] = profit_t4h[2]
-            enter[0] = profit_t1[3]
-            enter[1] = profit_t15[3]
-            enter[2] = profit_t1h[3]
-            enter[3] = profit_t4h[3]
-            if ol_profit != total_profit:
-                    ol_profit = total_profit
-                    #print(f"Points Total profit\n{ol_profit}")
-                    for i in channel_id:
-                        bot.send_message(chat_id=i, text=f"Points Total profit\n{ol_profit}")
-        except:
-            print('Error')
+            with open('data.txt') as json_file:
+                data = json.load(json_file)
+                alluser_id = data['user_id']
 
-        time.sleep(5)
+            for user_id in alluser_id:
+                task = asyncio.create_task(enter_position(user_id))
+            await task
+            time.sleep(3)
+        except:
+            pass
 
 
 if __name__ == '__main__':
-    main()
+        asyncio.run(main())

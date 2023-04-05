@@ -86,7 +86,7 @@ eng_btninfo = KeyboardButton(text='ℹ️Info')
 eng_btnSettings = KeyboardButton('⚙️Settings')
 eng_btnAdd_commands = KeyboardButton('⚙️Additional commands')
 eng_mainMenu = ReplyKeyboardMarkup(resize_keyboard=True)
-eng_mainMenu.add(eng_btnProfile, eng_btnSub, eng_btnTrading, eng_btninfo, eng_btnSettings, eng_btnAdd_commands)
+eng_mainMenu.add(eng_btnProfile, eng_btnSub, eng_btnTrading, eng_btninfo, eng_btnSettings)
 
 eng_btnOptions = KeyboardButton('🤖Options')
 eng_btnStart = KeyboardButton('🏁️Start')
@@ -111,12 +111,19 @@ eng_puyMenu_premium.add(eng_btnPuyOk_premium)
 eng_btnRegWallet = KeyboardButton(text='📝Registration')
 eng_btninfo = KeyboardButton(text='ℹ️Info')
 eng_puyRegWallet = ReplyKeyboardMarkup(resize_keyboard=True)
-eng_puyRegWallet.add(eng_btnRegWallet, eng_btnAdd_commands,eng_btn_back)
+eng_puyRegWallet.add(eng_btnRegWallet, eng_btn_back)
 
 eng_reg_wallet = InlineKeyboardButton(text='Wallet(TRC20)', callback_data='reg_wallet')
 eng_reg_api = InlineKeyboardButton(text='Binance API', callback_data='reg_api')
 eng_reg_nickname = InlineKeyboardButton(text='Nickname', callback_data='reg_nickname')
 eng_registr = InlineKeyboardMarkup(row_width=1)
 eng_registr.add(eng_reg_wallet, eng_reg_api,eng_reg_nickname)
+
+eng_get_position = KeyboardButton(text='Position')
+eng_get_balance = KeyboardButton(text='Balance')
+eng_get_order = KeyboardButton(text='Last order')
+eng_addParam = ReplyKeyboardMarkup(resize_keyboard=True)
+eng_addParam.add(eng_get_position, eng_get_balance, eng_get_order, eng_btn_back)
+
 
 

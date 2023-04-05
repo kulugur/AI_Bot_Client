@@ -1,17 +1,17 @@
 import logging
 import json
 import time
-
+from config import *
 from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import InputFile
-
+from hendlers_fun import position, my_balance
 import markups as nav
 from db import Database
 from binance.um_futures import UMFutures
-from my_binance import balance_binance
+from my_binance import balance_binance, get_position, histori_traid
 
 from binance.error import ClientError
-tg_chanel_user = 871610428
+
 admin = [871610428]
 
 users = [871610428, 634713845, -1001877258339]
@@ -67,7 +67,7 @@ def del_user_js(user_id):
 
 
 
-TOKEN = '5202575933:AAF-q7yxh_EyQBqsYtiuIViIFUHh27SFY0A'
+
 logging.basicConfig(level=logging.INFO)
 
 bot = Bot(token=TOKEN)
@@ -214,8 +214,39 @@ async def bot_masege(message: types.Message):
 
 
         elif message.text == '⚙️Дополнительные команды' or  message.text == '⚙️Additional commands':
-            await bot.send_message(message.from_user.id, 'English language /eng\nRussian language /rus\nMain Menu /start')
+            if db.get_language(message.from_user.id) == 'eng':
+                await bot.send_message(message.from_user.id, '⚙️Additional commands', reply_markup=nav.eng_addParam)
+            else:
+                await bot.send_message(message.from_user.id, '⚙️Additional commands', reply_markup=nav.eng_addParam)
+        elif message.text == 'Position':
+            await position(message.from_user.id)
 
+
+        elif message.text == 'Balance':
+            await my_balance(message.from_user.id)
+
+        elif message.text == 'Last order':
+            subscription = db.get_subscription(message.from_user.id)
+            if subscription == 'Light':
+                url = 'https://testnet.binancefuture.com'
+                id_key = admin[0]
+            else:
+                url = 'https://fapi.binance.com'
+                id_key = message.from_user.id
+            key = db.get_api_key(id_key)
+            secret = db.get_secret_key(id_key)
+            if key != None or secret != None:
+                try:
+                    histori = histori_traid(key, secret, url)[-1]
+                except:
+                    await bot.send_message(message.from_user.id,'Binance API Error', reply_markup= nav.eng_registr)
+                if type(histori) is str:
+                    await bot.send_message(message.from_user.id, text=f'ERROR: API-KEY Futures',
+                                           reply_markup=nav.eng_registr)
+                else:
+                    await bot.send_message(message.from_user.id, f'{histori["symbol"]}\n\nBTC: {histori["qty"]}BTC\nPrice: {histori["price"]}\ncommission: {histori["commission"]}')
+            else:
+                await bot.send_message(message.from_user.id, 'No Binance API', reply_markup= nav.eng_registr)
 
         elif message.text == '🤖Параметры' or  message.text == '🤖Options':
             await bot.send_message(message.from_user.id, '🤖')
@@ -284,10 +315,10 @@ async def bot_masege(message: types.Message):
 
                     db.set_start(message.from_user.id, True)
                     if db.get_language(message.from_user.id) == 'eng':
-                        await bot.send_message(message.from_user.id, f'Open position: {round(db.get_position_balance(message.from_user.id),3)}BTC\nBalance: {round(db.get_deposit_demo(message.from_user.id),3)} ')
+                        await position(message.from_user.id)
+                        await my_balance(message.from_user.id)
                     else:
-                        await bot.send_message(message.from_user.id, f'Открытая позиция: {round(db.get_position_balance(message.from_user.id),3)}BTC\n Balance: {round(db.get_deposit_demo(message.from_user.id),3)}')
-
+                        await position(message.from_user.id)
             else:
                 if db.get_language(message.from_user.id) == 'eng':
                     await bot.send_message(message.from_user.id, 'The trading bot is already running! ')
@@ -321,12 +352,13 @@ async def bot_masege(message: types.Message):
                     else:
                         await bot.send_message(message.from_user.id, 'Торговый бот остановлен! ')
                 else:
-                    Position = db.get_position_balance(message.from_user.id)
-                    balance = db.get_deposit_demo(message.from_user.id)
+
                     if db.get_language(message.from_user.id) == 'eng':
-                        await bot.send_message(message.from_user.id, f'Trading Bot stopped!\nBalance: {round(balance, 3)}\nPosition {round(Position, 3)}')
+                        await bot.send_message(message.from_user.id, f'Trading Bot stopped!')
+                        await my_balance(message.from_user.id)
                     else:
-                        await bot.send_message(message.from_user.id, f'Торговый бот остановлен!\nBalance: {balance}\nPosition {Position}')
+                        await bot.send_message(message.from_user.id, f'Торговый бот остановлен!')
+                        await my_balance(message.from_user.id)
                     # set_position_js(message.from_user.id,'close', True)
                     # time.sleep(10)
                     # db.set_position(message.from_user.id, 'position_1m', 'non')

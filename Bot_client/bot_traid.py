@@ -1,13 +1,15 @@
 import time
 import json
-from binance.um_futures import UMFutures
 import numpy as np
 from db import Database
 from my_binance import *
 import telebot
+from config import *
+import asyncio
+
 print('Start_v2.0')
-tg_chanel_user = 871610428
-bot = telebot.bot = telebot.TeleBot(token='5202575933:AAF-q7yxh_EyQBqsYtiuIViIFUHh27SFY0A')
+
+bot = telebot.bot = telebot.TeleBot(token=TOKEN)
 channel_id = "-1001702093331"
 db = Database('database.db')
 
@@ -39,163 +41,108 @@ def get_border(interval):
     ticker = client.ticker_price(symbol)
     last_price = float(ticker['price'])
 
-    return float(upper), float(lower), last_price, interval
+    return float(upper), float(lower), last_price
 
 
-def enter_position(border, user_id, data):
-    if user_id == tg_chanel_user:
-        url = 'https://testnet.binancefuture.com'
-    else:
-        url = 'https://api.binance.com'
-
-    interval = border[3]
-    if interval == '1m':
-        procent = 20
-        position = 'position_1m'
-    elif interval == '5m':
-        procent = 20
-        position = 'position_5m'
-    elif interval == '15m':
-        procent = 30
-        position = 'position_15m'
-    elif interval == '30m':
-        procent = 40
-        position = 'position_30m'
-    elif interval == '1h':
-        procent = 60
-        position = 'position_1h'
-    elif interval == '4h':
-        procent = 70
-        position = 'position_4h'
-    profit_pricent = (border[0] / border[1] * 100) - 100
-    if border[2] > border[0] and db.get_position(user_id, position) != 'SHORT':  # вход позиция short
-        if db.get_profit_2(user_id) == 'ON':
-
-            if profit_pricent >= 2:
-
-                key = db.get_api_key(user_id)
-                secret = db.get_secret_key(user_id)
-                position_my = get_position(key, secret, url)
-                balance = balance_binance(key, secret, url)[0]
-                qwot = point_calculation(balance, procent, border[2])
-                res = open_order(key, secret, qwot, 'SELL', 'MARKET', url)
-                if type(res) is str:
-                    bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
-                else:
-                    histori = histori_traid(key, secret, url)[-1]
-
-                    bot.send_message(chat_id=user_id,
-                                     text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                    db.set_position(user_id, position, 'SHORT')
-                    if user_id == tg_chanel_user:
-                        for id in data:
-                            try:
-                                print(id['user_id'])
-                                bot.send_message(chat_id=id['user_id'],
-                                                 text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                            except:
-                                print(id['user_id'])
-        else:
-            key = db.get_api_key(user_id)
-            secret = db.get_secret_key(user_id)
-            position_my = get_position(key, secret, url)
-            balance = balance_binance(key, secret, url)[0]
-            qwot = point_calculation(balance, procent, border[2])
-            res = open_order(key, secret, qwot, 'SELL', 'MARKET', url)
-            if type(res) is str:
-                bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
-            else:
-                histori = histori_traid(key, secret, url)[-1]
-                bot.send_message(chat_id=user_id,
-                                 text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                db.set_position(user_id, position, 'SHORT')
-                if user_id == tg_chanel_user:
-                    for id in data:
-                        try:
-                            print(id['user_id'])
-                            bot.send_message(chat_id=id['user_id'],
-                                             text=f'SHORT: {interval}interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                        except:
-                            print(id['user_id'])
-
-    elif border[2] < border[1] and db.get_position(user_id, position) != 'LONG':  # вход позиция Long
-        if db.get_profit_2(user_id) == 'ON':
-
-            if profit_pricent >= 2:
-                db.set_position(user_id, position, 'LONG')
-                key = db.get_api_key(user_id)
-                secret = db.get_secret_key(user_id)
-                position_my = get_position(key, secret, url)
-                balance = balance_binance(key, secret, url)[0]
-                qwot = point_calculation(balance, procent, border[2])
-                res = open_order(key, secret, qwot, 'BUY', 'MARKET', url)
-                if type(res) is str:
-                    bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
-                else:
-                    histori = histori_traid(key, secret, url)[-1]
-                    bot.send_message(chat_id=user_id,
-                                     text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                    db.set_position(user_id, position, 'LONG')
-                    if user_id == tg_chanel_user:
-
-                        for id in data:
-                            try:
-                                print(id['user_id'])
-                                bot.send_message(chat_id=id['user_id'],
-                                                 text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                            except:
-                                print(id['user_id'])
-
-        else:
-
-            key = db.get_api_key(user_id)
-            secret = db.get_secret_key(user_id)
-            position_my = get_position(key, secret, url)
-            balance = balance_binance(key, secret, url)[0]
-            qwot = point_calculation(balance, procent, border[2])
-            res = open_order(key, secret, qwot, 'BUY', 'MARKET', url)
-            if type(res) is str:
-                bot.send_message(chat_id=user_id, text=f'SHORT: {interval} interval{qwot}\nERROR: {res}')
-            else:
-                histori = histori_traid(key, secret, url)[-1]
-                bot.send_message(chat_id=user_id,
-                                 text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                db.set_position(user_id, position, 'LONG')
-                if user_id == tg_chanel_user:
-                    for id in data:
-                        try:
-                            print(id['user_id'])
-                            bot.send_message(chat_id=id['user_id'],
-                                             text=f'LONG: {interval}-interval\n{histori["qty"]}:BTC\n{histori["price"]}:Price\n{histori["commission"]}:commission\nBalance-{balance}\n{position_my}')
-                        except:
-                            print(id['user_id'])
-
-
-def main():
-    border_1m = get_border('1m')
-    border_5m = get_border('5m')
-    border_15m = get_border('15m')
-    border_30m = get_border('30m')
-    border_1h = get_border('1h')
-    border_4h = get_border('4h')
-    print(f'1m: {border_1m}\n5m: {border_5m}\n15m: {border_15m}\n30m: {border_30m}\n1h: {border_1h}\n4h: {border_4h}\n')
-
-    with open('data.txt') as json_file:
-        data = json.load(json_file)
-        alluser_id = data['user_id']
+def message_all_users(text):  # отправка сообшения всем пользователям
     with open('data2.txt') as json_file:
         data2 = json.load(json_file)
-    for user_id in alluser_id:
-        enter_position(border_1m, user_id, data2)
-        enter_position(border_5m, user_id, data2)
-        enter_position(border_15m, user_id, data2)
-        enter_position(border_30m, user_id, data2)
-        enter_position(border_1h, user_id, data2)
-        enter_position(border_4h, user_id, data2)
+    for user_id in data2:
+        try:
 
-    time.sleep(3)
+            bot.send_message(chat_id=user_id['user_id'],
+                             text=text)
+        except:
+            print(user_id['user_id'])
+
+
+async def enter_position(user_id):
+    interval = ['1m', '5m', '15m', '30m', '1h', '4h']
+    for i in interval:
+        border = get_border(i)
+        if i == '1m':
+            procent = 2
+            position_interval = 'position_1m'
+        elif i == '5m':
+            procent = 2
+            position_interval = 'position_5m'
+        elif i == '15m':
+            procent = 3
+            position_interval = 'position_15m'
+        elif i == '30m':
+            procent = 4
+            position_interval = 'position_30m'
+        elif i == '1h':
+            procent = 6
+            position_interval = 'position_1h'
+        elif i == '4h':
+            procent = 7
+            position_interval = 'position_4h'
+        if user_id == tg_chanel_user:
+            url = 'https://testnet.binancefuture.com'
+        else:
+            url = 'https://fapi.binance.com'
+
+        profit_pricent = (border[0] / border[1] * 100) - 100
+
+        if border[2] > border[0] and db.get_position(user_id, position_interval) != 'SHORT':  # вход позиция short
+            if db.get_profit_2(user_id) == 'ON':
+                if profit_pricent >= 2:
+                    await enter_binance(user_id, url, procent, border, position_interval, 'SHORT')
+            else:
+                await enter_binance(user_id, url, procent, border, position_interval, 'SHORT')
+
+        elif border[2] < border[1] and db.get_position(user_id, position_interval) != 'LONG':  # вход позиция Long
+            if db.get_profit_2(user_id) == 'ON':
+                if profit_pricent >= 2:
+                    await enter_binance(user_id, url, procent, border, position_interval, 'LONG')
+            else:
+                await enter_binance(user_id, url, procent, border, position_interval, 'LONG')
+
+
+async def enter_binance(user_id, url, procent, border, position_interval, position):  # вход по рынку Binance
+    try:
+        if position == 'SHORT':
+            size = 'SELL'
+        else:
+            size = 'BUY'
+        key = db.get_api_key(user_id)
+        secret = db.get_secret_key(user_id)
+        position_my = get_position(key, secret, url)
+        balance = balance_binance(key, secret, url)[0]
+        qwot = point_calculation(balance, procent, border[2])
+        res = open_order(key, secret, qwot, size, 'MARKET', url)
+        db.set_position(user_id, position_interval, position)
+        if type(res) is str:
+            bot.send_message(chat_id=user_id, text=f'{position}: {qwot}\nERROR: {res}')
+        else:
+            await asyncio.sleep(5)
+            orders = histori_traid(key, secret, url)[-1]
+
+            bot.send_message(chat_id=user_id,
+                             text=f'{position}:\nBTC: {orders["qty"]}\nPrice: {orders["price"]}\nCommission: {orders["commission"]}\nBalance: {balance}\n\n{position_my[0]}\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
+            if user_id == tg_chanel_user:
+                message_all_users(
+                    f'{position}:\nBTC: {orders["qty"]}\nPrice: {orders["price"]}\nCommission: {orders["commission"]}\nBalance: {balance}\n\n{position_my[0]}\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
+    except:
+        bot.send_message(chat_id=user_id, text=f'{position}: {qwot}\nERROR:')
+        return 'error'
+
+
+async def main():
+    while True:
+        try:
+            with open('data.txt') as json_file:
+                data = json.load(json_file)
+                alluser_id = data['user_id']
+
+            for user_id in alluser_id:
+                task = asyncio.create_task(enter_position(user_id))
+            await task
+            time.sleep(3)
+        except:
+            pass
 
 
 if __name__ == '__main__':
-    while True:
-        main()
+    asyncio.run(main())
