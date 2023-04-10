@@ -91,6 +91,10 @@ class Database:
         with self.connection:
              return self.cursor.execute("SELECT nickname FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
 
+    def get_id(self, pay_id):
+        with self.connection:
+             return self.cursor.execute("SELECT user_id FROM users WHERE wallet=?", (pay_id,)).fetchone()[0]
+
     def get_time_sub(self, user_id):
         with self.connection:
              return self.cursor.execute("SELECT time_sub FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
@@ -129,6 +133,14 @@ class Database:
         with self.connection:
              return self.cursor.execute("SELECT wallet FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
 
+    def get_wallet_all(self):
+        with self.connection:
+            result = self.cursor.execute("SELECT wallet FROM users  ").fetchall()
+            pay_id = []
+            for row in result:
+                pay_id.append(str(row[0]))
+            return pay_id
+
     def get_language(self, user_id):
         with self.connection:
              return self.cursor.execute("SELECT language FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
@@ -148,3 +160,4 @@ class Database:
     def get_position_balance(self, user_id,):
         with self.connection:
              return self.cursor.execute("SELECT position_balance FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
+

@@ -1,6 +1,13 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 #RUS
 btn_back = KeyboardButton(text='👣Назад')
+
+admin_id = KeyboardButton(text='/Найти по ID')
+admin_Menu = ReplyKeyboardMarkup(resize_keyboard=True)
+admin_Menu.add(admin_id, btn_back)
+
+
+
 btnProfile = KeyboardButton('👽 Профиль')
 btnSub = KeyboardButton('✍️Подписка')
 btnTrading = KeyboardButton('📈️Торговля')
@@ -110,10 +117,11 @@ eng_puyMenu_premium.add(eng_btnPuyOk_premium)
 
 eng_btnRegWallet = KeyboardButton(text='📝Registration')
 eng_btninfo = KeyboardButton(text='ℹ️Info')
+eng_deposit = KeyboardButton(text='💵️Deposit')
 eng_puyRegWallet = ReplyKeyboardMarkup(resize_keyboard=True)
-eng_puyRegWallet.add(eng_btnRegWallet, eng_btn_back)
+eng_puyRegWallet.add(eng_btnRegWallet, eng_deposit, eng_btn_back)
 
-eng_reg_wallet = InlineKeyboardButton(text='Wallet(TRC20)', callback_data='reg_wallet')
+eng_reg_wallet = InlineKeyboardButton(text='Binance-Pay-ID', callback_data='reg_wallet')
 eng_reg_api = InlineKeyboardButton(text='Binance API', callback_data='reg_api')
 eng_reg_nickname = InlineKeyboardButton(text='Nickname', callback_data='reg_nickname')
 eng_registr = InlineKeyboardMarkup(row_width=1)

@@ -61,22 +61,22 @@ async def enter_position(user_id):
     for i in interval:
         border = get_border(i)
         if i == '1m':
-            procent = 2
+            procent = 5
             position_interval = 'position_1m'
         elif i == '5m':
-            procent = 2
+            procent = 10
             position_interval = 'position_5m'
         elif i == '15m':
-            procent = 3
+            procent = 15
             position_interval = 'position_15m'
         elif i == '30m':
-            procent = 4
+            procent = 20
             position_interval = 'position_30m'
         elif i == '1h':
-            procent = 6
+            procent = 25
             position_interval = 'position_1h'
         elif i == '4h':
-            procent = 7
+            procent = 30
             position_interval = 'position_4h'
         if user_id == tg_chanel_user:
             url = 'https://testnet.binancefuture.com'

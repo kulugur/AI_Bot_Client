@@ -3,18 +3,30 @@ import json
 import time
 from config import *
 from aiogram import Bot, Dispatcher, executor, types
-from aiogram.types import InputFile
+from google.oauth2.credentials import Credentials
 from hendlers_fun import position, my_balance
 import markups as nav
-from db import Database
+from gmail import get_gmail_transfer
 from binance.um_futures import UMFutures
 from my_binance import balance_binance, get_position, histori_traid
 
 from binance.error import ClientError
-
 admin = [871610428]
 
+
 users = [871610428, 634713845, -1001877258339]
+def set_admin():
+    with open('admin.txt') as json_file:
+        data = json.load(json_file)
+        data.append(871610428)
+        with open('admin.txt', 'w') as outfile:
+
+            json.dump(data, outfile)
+def del_admin():
+
+    with open('admin.txt', 'w') as outfile:
+        data = []
+        json.dump(data, outfile)
 
 def set_user_js(user_id):
     with open('data2.txt') as json_file:
@@ -83,14 +95,30 @@ async def start(message: types.Message):
 async def start(message: types.Message):
     db.set_language(message.from_user.id, 'eng')
     await bot.send_message(message.from_user.id, 'Language changed to English\nClick /start')
+
 @dp.message_handler(lambda message: message.chat.id in admin, commands=['admin'])
-async def start(message: types.Message):
+async def start_admin(message: types.Message):
     all_user = db.get_all()
     text = ''
     for i in all_user:
-        text +=f'id {i[1]} НИК {i[2]} Подписка{i[5]} leng {i[14]} balance {i[23]}\n\n'
+        text += f'id {i[1]} НИК {i[2]} Подписка{i[5]} leng {i[14]} balance {i[23]}\n\n'
 
-    await bot.send_message(message.from_user.id, text)
+    await bot.send_message(message.from_user.id, text, reply_markup=nav.admin_Menu)
+
+
+
+
+@dp.message_handler(lambda message: message.chat.id in admin, commands=['id'])
+async def admin_menu(message: types.Message):
+    res = message.text.split()
+    for i in db.get_all():
+        if i[1] == int(res[1]):
+            await bot.send_message(message.from_user.id, f'ID: {i[1]}\nName:{i[2]}\nSubscription: {i[5]}\nStart: {i[6]}\nPay_id: {i[9]}\nLenguage: {i[14]}\nDeposit: {i[26]}\nBalance: {i[23]}')
+
+
+
+
+
 
 
 
@@ -125,17 +153,17 @@ async def bot_masege(message: types.Message):
             else:
                 binance_api = 'No'
             nicname = db.get_nickname(message.from_user.id)
-            timeSub = db.get_time_sub(message.from_user.id)
+            deposit = db.get_deposit_demo(message.from_user.id)
             subscription = db.get_subscription(message.from_user.id)
             wallet = db.get_wallet(message.from_user.id)
 
             if db.get_language(message.from_user.id) == 'eng':
                 await bot.send_message(message.from_user.id,
-                                       f'User_id: {message.from_user.id}\nNickname: {nicname}\nWallet {wallet}\nYour subscription: {subscription}\nBinance_api: {binance_api}\nLeft: {timeSub} days')
+                                       f'User_id: {message.from_user.id}\nNickname: {nicname}\nWallet {wallet}\nYour subscription: {subscription}\nBinance_api: {binance_api}\nDeposit: {deposit} ')
 
             else:
                 await bot.send_message(message.from_user.id,
-                                       f'User_id: {message.from_user.id}\nНик: {nicname}\nКошелек {wallet}\nВаша подписка: {subscription}\nBinance_api: {binance_api}\nОсталось: {timeSub} дней')
+                                       f'User_id: {message.from_user.id}\nНик: {nicname}\nКошелек {wallet}\nВаша подписка: {subscription}\nBinance_api: {binance_api}\nDeposit: {deposit} ')
 
         elif message.text == '👣Назад' or message.text == '👣Back':
             if db.get_language(message.from_user.id) == 'eng':
@@ -210,8 +238,27 @@ async def bot_masege(message: types.Message):
             # else:
             #     await bot.send_message(message.from_user.id, 'Введите кошелек USDT Tron (TRC20) ',
             #                            reply_markup=nav.mainMenu)
-
-
+        elif message.text == '💵️Deposit':
+            deposit = db.get_deposit_demo(message.from_user.id)
+            await bot.send_message(message.from_user.id, f'Deposit: {deposit} USDT')
+            if db.get_wallet(message.from_user.id) == None:
+                if db.get_language(message.from_user.id) == 'eng':
+                    await bot.send_message(message.from_user.id, 'Register your Binance Pay for payment',
+                                       reply_markup=nav.eng_registr)
+                else:
+                    await bot.send_message(message.from_user.id, 'Зарегистрируйте свой Binance Pay для оплаты',
+                                       reply_markup=nav.eng_registr)
+            else:
+                media = types.MediaGroup()
+                media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-53.jpg', 'Pay_ID'))
+                await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
+                if db.get_language(message.from_user.id) == 'eng':
+                    await bot.send_message(message.from_user.id,
+                                           f'USDT\nAfter payment, click paid, after confirming the transaction, The balance will be replenished.\nUSDT Pay ID wallet: 210914309')
+                else:
+                    await bot.send_message(message.from_user.id,
+                                           f'USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции Баланс будет пополнен.\nКошелек USDT Pay ID: 210914309')
+                await bot.send_message(message.from_user.id, '\n210914309', reply_markup=nav.puyMenu_optimum)
 
         elif message.text == '⚙️Дополнительные команды' or  message.text == '⚙️Additional commands':
             if db.get_language(message.from_user.id) == 'eng':
@@ -395,9 +442,9 @@ async def bot_masege(message: types.Message):
                 db.set_wallet(message.from_user.id, message.text)
                 db.set_signup(message.from_user.id, 'Done')
                 if db.get_language(message.from_user.id) == 'eng':
-                    await bot.send_message(message.from_user.id, 'Wallet registration successful', reply_markup=nav.eng_mainMenu)
+                    await bot.send_message(message.from_user.id, 'Binance Pay registration successful!', reply_markup=nav.puyMenu)
                 else:
-                    await bot.send_message(message.from_user.id, 'Регистрация кошелька прошла успешно', reply_markup=nav.mainMenu)
+                    await bot.send_message(message.from_user.id, 'Регистрация Binance Pay прошла успешно! ', reply_markup=nav.puyMenu)
 
             elif db.get_signup(message.from_user.id) == 'key_reg':
                 db.set_api_key(message.from_user.id, message.text)
@@ -449,9 +496,9 @@ async def Light_sub(message: types.Message):
 @dp.callback_query_handler(text='Optimum_sub')
 async def Optimum_sub(message: types.Message):
     if db.get_language(message.from_user.id) == 'eng':
-        await bot.send_message(message.from_user.id, f'Subscription not available, testing in progress')
+        await bot.send_message(message.from_user.id, f'Binance wallet connection\navailable with Optima\nsubscriptionthe price of 1 dollar goes to your deposit to the bot.\nBot commission 15% of your profit!', reply_markup=nav.sub_inlain_Optimum)
     else:
-        await bot.send_message(message.from_user.id, 'Подписка недоступна, идёт тестирование')
+        await bot.send_message(message.from_user.id, 'Подключение кошелька Binance\nдоступно с подпиской Optima\nцена 1 доллар идет на ваш депозит  боту.\nКомиссия бота 15% от вашей прибыли!', reply_markup=nav.sub_inlain_Optimum)
 @dp.callback_query_handler(text='Premium_sub')
 async def Premium_sub(message: types.Message):
     if db.get_language(message.from_user.id) == 'eng':
@@ -517,17 +564,20 @@ async def Optimum(message: types.Message):
            await bot.send_message(message.from_user.id, f'У вас уже подключена подписка {subscription}')
     elif db.get_wallet(message.from_user.id) == None:
         if db.get_language(message.from_user.id) == 'eng':
-            await bot.send_message(message.from_user.id, 'Register your wallet for payment', reply_markup=nav.eng_puyRegWallet)
+            await bot.send_message(message.from_user.id, 'Register your Binance Pay for payment', reply_markup=nav.eng_registr)
         else:
-            await bot.send_message(message.from_user.id, 'Зарегистрируйте свой кошелёк для оплаты', reply_markup=nav.puyRegWallet)
+            await bot.send_message(message.from_user.id, 'Зарегистрируйте свой Binance Pay для оплаты', reply_markup=nav.eng_registr)
     else:
+        media = types.MediaGroup()
+        media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-53.jpg', 'Pay_ID'))
+        await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
         if db.get_language(message.from_user.id) == 'eng':
             await bot.send_message(message.from_user.id,
-                                   f'To connect a subscription for 1 month Optimum\nMake a payment to a cryptocurrency wallet\n5 USDT\nAfter payment, click paid, after confirming the transaction, the package will be connected.\nUSDT Tron Wallet (TRC20)')
+                                   f'To activate the Optimum subscription\nMake a payment to the Pay ID wallet\n1 USDT\nAfter payment, click paid, after confirming the transaction, the package will be connected.\nUSDT Pay ID wallet: 210914309')
         else:
             await bot.send_message(message.from_user.id,
-                               f'Для подключения подписки на 1 месяц Optimum\nПроизведите оплату на криптовалютный кошелек\n10 USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции пакет будет подключен.\nКошелек USDT Tron (TRC20)')
-        await bot.send_message(message.from_user.id, '\nTSphipuArumtab7EnVHYspUD3bxyLBtaAq', reply_markup=nav.puyMenu_optimum)
+                               f'Для подключения подписки Optimum\nПроизведите оплату на кошелек Pay ID\n1 USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции пакет будет подключен.\nКошелек USDT Pay ID: 210914309')
+        await bot.send_message(message.from_user.id, '\n210914309', reply_markup=nav.puyMenu_optimum)
 
 
 @dp.callback_query_handler(text='Premium')
@@ -567,12 +617,16 @@ async def PuyOk_premium(message: types.Message):
 
 @dp.callback_query_handler(text='PuyOk_optimum')
 async def PuyOk_optimum(message: types.Message):
-    db.set_payment(message.from_user.id, 'yes')
-    db.set_subscription(message.from_user.id, 'Optimum')
+    get_gmail_transfer()
     if db.get_language(message.from_user.id) == 'eng':
-        await bot.send_message(message.from_user.id, f'Your subscription has been changed to Premium')
+        await bot.send_message(message.from_user.id,
+                           f'Waiting for transaction confirmation')
+
     else:
-        await bot.send_message(message.from_user.id, f'Ваша подписка изменена на Optimum')
+        await bot.send_message(message.from_user.id,
+                       f'Ожидаем подтверждение транзакций')
+
+
 
 @dp.callback_query_handler(text='PuyClose_lait_optimum')
 async def PuyClose__optimum(message: types.Message):
@@ -713,10 +767,15 @@ async def binance_traidNo(callback: types.CallbackQuery):
 @dp.callback_query_handler(text='reg_wallet')
 async def PuyClose_lait_premium(message: types.Message):
     db.set_signup(message.from_user.id, 'wallet_reg')
+    media = types.MediaGroup()
+    media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-46.jpg', 'Pay_ID'))
+    media.attach_photo(types.InputFile('image/photo_2023-04-09_17-37-24.jpg', 'Pay_ID'))
+    await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
     if db.get_language(message.from_user.id) == 'eng':
-        await bot.send_message(message.from_user.id, f'Enter your wallet:')
+        await bot.send_message(message.from_user.id, f'Enter your Pay-ID:')
+
     else:
-        await bot.send_message(message.from_user.id, f'Введите ваш кошелёк:')
+        await bot.send_message(message.from_user.id, f'Введите ваш Pay-ID:')
 
 @dp.callback_query_handler(text='reg_api')
 async def PuyClose_lait_premium(message: types.Message):
