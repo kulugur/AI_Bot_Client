@@ -107,6 +107,7 @@ eng_puyMenu_light.add(eng_btnPuyOk_light)
 
 
 
+
 eng_btnPuyOk_optimum = InlineKeyboardButton(text='💵Paid', callback_data='PuyOk_optimum')
 eng_puyMenu_optimum = InlineKeyboardMarkup(row_width=1)
 eng_puyMenu_optimum.add(eng_btnPuyOk_optimum)
@@ -132,6 +133,8 @@ eng_get_balance = KeyboardButton(text='Balance')
 eng_get_order = KeyboardButton(text='Last order')
 eng_addParam = ReplyKeyboardMarkup(resize_keyboard=True)
 eng_addParam.add(eng_get_position, eng_get_balance, eng_get_order, eng_btn_back)
+
+
 
 
 

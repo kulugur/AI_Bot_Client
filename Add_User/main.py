@@ -121,7 +121,7 @@ async def main(chanal_name, client):
 			except:
 				print('error')
 
-client = TelegramClient(, API_ID, API_HASH)
+client = TelegramClient(PHONE, API_ID, API_HASH)
 
 client.connect()
 for chanel in CHANNEL_PARS:

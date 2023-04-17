@@ -71,7 +71,7 @@ def get_position(key, secret, url):
 
     try:
         response = um_futures_client.get_position_risk(symbol="BTCUSDT", recvWindow=6000)
-        return response[0]['symbol'], response[0]['entryPrice'], response[0]['positionAmt'], response[0]['unRealizedProfit'], response[0]['liquidationPrice']
+        return response[0]['symbol'], response[0]['entryPrice'], response[0]['positionAmt'], response[0]['unRealizedProfit'], response[0]['liquidationPrice'],response[0]['markPrice']
 
 
     except ClientError as error:

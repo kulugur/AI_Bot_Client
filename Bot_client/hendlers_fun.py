@@ -33,7 +33,7 @@ async def position(from_user):
             await bot.send_message(from_user, text=f'ERROR: API-KEY Futures', reply_markup=nav.eng_registr)
         else:
             await bot.send_message(from_user,
-                                   f'{position_my[0]}\n\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
+                                   f'{position_my[0]}\nMarketPrice: {position_my[5]}\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
     else:
         await bot.send_message(from_user, 'No Binance API', reply_markup=nav.eng_registr)
 
