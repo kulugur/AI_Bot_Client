@@ -1,6 +1,6 @@
 import configparser
 import json
-
+import pandas
 from telethon.sync import TelegramClient
 from telethon import connection
 from config import *
@@ -8,7 +8,7 @@ from config import *
 from datetime import date, datetime
 from telethon.tl.functions.users import GetFullUserRequest
 # классы для работы с каналами
-from telethon.tl.functions.channels import GetParticipantsRequest
+from telethon.tl.functions.channels import GetParticipantsRequest, JoinChannelRequest
 from telethon.tl.types import ChannelParticipantsSearch
 
 # класс для работы с сообщениями
@@ -57,7 +57,7 @@ async def dump_all_messages(channel):
 
 	all_messages = []   # список всех сообщений
 	total_messages = 0
-	total_count_limit = 50000 # поменяйте это значение, если вам нужны не все сообщения
+	total_count_limit =2500# поменяйте это значение, если вам нужны не все сообщения
 
 	class DateTimeEncoder(json.JSONEncoder):
 		'''Класс для сериализации записи дат в JSON'''
@@ -88,42 +88,124 @@ async def dump_all_messages(channel):
 	with open('channel_messages.json', 'w', encoding='utf8') as outfile:
 		 json.dump(all_messages, outfile, ensure_ascii=False, cls=DateTimeEncoder)
 
-async def find_user(user_id):
+async def find_user(user_id, num):
 
-    full = await client(GetFullUserRequest(user_id)) # Получаем ник из id
-    user_name = full.users[0].username
-    print(user_name)
-    with open("users.txt", "a") as file:
-        file.writelines(f'@{user_name}\n')
+	with open("all_users.txt", "r") as file:
+		users = file.readlines()
 
 
-async def main(chanal_name, client):
-	client = client
+
+	full = await client(GetFullUserRequest(user_id)) # Получаем ник из id
+	user_name = full.users[0].username
+	print(num, user_name)
 
 
-	channel = await client.get_entity(chanal_name)
-	#await dump_all_participants(channel)
-	await dump_all_messages(channel)
+	with open("all_users.txt", "a") as file:
 
-	with open('channel_messages.json', 'r', encoding='utf8') as outfile:
-		user = json.load(outfile)  # загнали все, что получилось в переменную
-
-	user_list = []
-	for i in user:
-		if i['from_id']['user_id'] in user_list:
-			print(i['from_id']['user_id'], 'error')
+		if f'@{user_name}\n' in users:
+			pass
 		else:
-			user_list.append(i['from_id']['user_id'])
-	for i in user_list:
-		with client:
+			file.writelines(f'@{user_name}\n')
+
+
+
+async def get_my_user():
+
+
+
+    dialogs = await client.get_dialogs()
+
+    channels = {d.entity.username: d.entity
+                for d in dialogs
+                if d.is_channel}
+    print(channels)
+
+
+    my_channel = MY_CHANNEL.split('/')[-1]
+    channel_my = channels[my_channel]
+
+    members_telethon_list_my = await client.get_participants(channel_my, aggressive=True)
+
+
+
+
+    user_id = [member.id for member in members_telethon_list_my]
+    username_list = [member.username for member in members_telethon_list_my]
+    first_name_list = [member.first_name for member in members_telethon_list_my]
+    last_name_list = [member.last_name for member in members_telethon_list_my]
+    phone_list = [member.phone for member in members_telethon_list_my]
+
+    ds = pandas.DataFrame()
+    ds['user_id'] = user_id
+    ds['username'] = username_list
+    ds['first_name'] = first_name_list
+    ds['last_name'] = last_name_list
+    ds['phone'] = phone_list
+    ds.to_csv('my_subscribers.csv', index=False)
+
+async def comparison_users():
+	with open("my_users.txt", "w") as file:
+		emp_ds = pandas.read_csv('my_subscribers.csv')
+		user_name = emp_ds.username
+		for user in user_name:
+			if user == user:
+				file.write(f'@{user}\n')
+
+	with open("users.txt", "w") as file:
+		print("users.txt создан")
+	with open("all_users.txt", "r") as file:
+ 		users = file.readlines()
+	print(users)
+	with open("my_users.txt", "r") as file:
+		my_users = file.readlines()
+	for i in users:
+		if i in my_users:
+			pass
+		else:
+			with open("users.txt", "a") as file:
+				file.write(i)
+
+
+
+async def main(chanel):
+
+
+		channel = await client.get_entity(chanel)
+		# await dump_all_participants(channel)
+		await dump_all_messages(channel)
+
+		with open('channel_messages.json', 'r', encoding='utf8') as outfile:
+			user = json.load(outfile)  # загнали все, что получилось в переменную
+
+		user_list = []
+		for i in user:
 			try:
-				client.loop.run_until_complete(find_user(i), client)
+				if i['from_id']['user_id'] in user_list:
+					print(i['from_id']['user_id'], 'error')
+				else:
+					user_list.append(i['from_id']['user_id'])
 			except:
-				print('error')
+				print('нет ID')
+		print('find_user Start')
+		num = 0
+		for i in user_list:
+			num += 1
+			try:
+				await find_user(i,num)
+			except:
+				print(num, 'error')
+		print('Get_my_User start')
+		await get_my_user()
+		print('comparison_users Start')
+		await comparison_users()
 
-client = TelegramClient(PHONE, API_ID, API_HASH)
 
+
+
+
+
+client = TelegramClient(my_client[0], my_client[1], my_client[2])
 client.connect()
-for chanel in CHANNEL_PARS:
-	with client:
-		client.loop.run_until_complete(main(chanel, client))
+
+with client:
+	client.loop.run_until_complete(main(CHANNEL_PARS))

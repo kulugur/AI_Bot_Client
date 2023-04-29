@@ -6,8 +6,9 @@ from binance.um_futures import  UMFutures
 
 from binance.error import ClientError
 
-# key ='GyvAV7Mqrcww6jsmKkJaaF6INUgMbluM4ydxyiFHE3ioOE87Seym1xJWW3u98AHR'
-# secret= 'VOmu6fEU4ecqMQOJvXmwAzx64E8yOmpmuQDdtjatV2yoxZbzznLFHNs9hRtnakbV'
+key ='PXjJboXS1IgXc8IvkFcMG4lNCrScsCQibExX2QhBRnOsJwNjUSjDzpgBLE2v6j8O'
+secret= 'HBEyAlnM9PJdTKxIo733k0xOqS3EX3Ok0cTtXobKds0iS1fwrDkjQHAMCqkRD0No'
+url = 'https://fapi.binance.com'
 
 # key ='b4945dd41bdef055f2864eaf3488c28b3846be8c65a120b674928f62672ed48a'
 # secret = 'a2acdb85925314acf6c77b5c5a741497313545d71cfeab8cd001bad018a051bb'
@@ -115,7 +116,7 @@ def open_order(key, secret, quantity, side, types, url):
 #     print('da')
 #open_order(key, secret, 22350.8, 0.001,  'BUY', 'STOP')
 #close_order(key, secret, url)
-#print(histori_traid(key, secret, url)) #История
-#print(get_orders(key, secret, url)) # все открытые ордера
-#print(get_position(key, secret, url)) # открытые позиции
+# print(histori_traid(key, secret, url)) #История
+print(get_orders(key, secret, url)) # все открытые ордера
+print(get_position(key, secret, url)) # открытые позиции
 #print(get_status_aip(key, secret, url)) # статус апи

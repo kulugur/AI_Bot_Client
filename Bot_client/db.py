@@ -82,15 +82,25 @@ class Database:
         with self.connection:
             return self.cursor.execute("UPDATE users SET deposit_demo=? WHERE user_id=?", (deposit_demo, user_id,))
 
+    def set_id_help(self, user_id, id_help):
+        with self.connection:
+            return self.cursor.execute("UPDATE users SET id_help=? WHERE user_id=?", (id_help, user_id,))
+
     def get_deposit_demo(self, user_id):
         with self.connection:
              return self.cursor.execute("SELECT deposit_demo FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
+    def get_id_help(self, user_id):
+        with self.connection:
+             return self.cursor.execute("SELECT id_help FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
     def get_all(self):
         return self.cursor.execute("SELECT * FROM users " ).fetchall()
     def get_nickname(self, user_id):
         with self.connection:
              return self.cursor.execute("SELECT nickname FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
 
+    def get_user(self, user_id):
+        with self.connection:
+             return self.cursor.execute("SELECT * FROM users WHERE user_id=?", (user_id,)).fetchone()
     def get_id(self, pay_id):
         with self.connection:
              return self.cursor.execute("SELECT user_id FROM users WHERE wallet=?", (pay_id,)).fetchone()[0]

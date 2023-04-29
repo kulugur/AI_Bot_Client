@@ -16,7 +16,7 @@ admin = [871610428]
 
 async def position(from_user):
     subscription = db.get_subscription(from_user)
-    if subscription == 'Light':
+    if subscription == 'Lite':
         url = 'https://testnet.binancefuture.com'
         id_key = admin[0]
     else:
@@ -32,14 +32,20 @@ async def position(from_user):
         if type(position_my) is str:
             await bot.send_message(from_user, text=f'ERROR: API-KEY Futures', reply_markup=nav.eng_registr)
         else:
+            if float(position_my[2]) > 0:
+                tupe = 'Long'
+            elif float(position_my[2]) == 0:
+                tupe = 'No position'
+            else:
+                tupe = 'Short'
             await bot.send_message(from_user,
-                                   f'{position_my[0]}\nMarketPrice: {position_my[5]}\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
+                                   f'{position_my[0]}\n{tupe}\nMarketPrice: {position_my[5]}\nEntry Price: {position_my[1]}\nSize: {position_my[2]}\nPNL: {position_my[3]}')
     else:
         await bot.send_message(from_user, 'No Binance API', reply_markup=nav.eng_registr)
 
 async def my_balance(from_user):
     subscription = db.get_subscription(from_user)
-    if subscription == 'Light':
+    if subscription == 'Lite':
         url = 'https://testnet.binancefuture.com'
         id_key = admin[0]
     else:
@@ -57,5 +63,7 @@ async def my_balance(from_user):
                                    reply_markup=nav.eng_registr)
         else:
             await bot.send_message(from_user, f'Balance USDT: {balance[0]}')
+            db.set_deposit_demo(from_user, balance[0] )
+            db.set_binance_traid(from_user, 'ON')
     else:
         await bot.send_message(from_user, 'No Binance API', reply_markup=nav.eng_registr)

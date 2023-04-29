@@ -1,7 +1,7 @@
 import time
 import json
 import numpy as np
-from db import Database
+from hendlers_fun import position, my_balance
 from my_binance import *
 import telebot
 from config import *
@@ -88,15 +88,19 @@ async def enter_position(user_id):
         if border[2] > border[0] and db.get_position(user_id, position_interval) != 'SHORT':  # вход позиция short
             if db.get_profit_2(user_id) == 'ON':
                 if profit_pricent >= 2:
+                    await my_balance(user_id)
                     await enter_binance(user_id, url, procent, border, position_interval, 'SHORT')
             else:
+                await my_balance(user_id)
                 await enter_binance(user_id, url, procent, border, position_interval, 'SHORT')
 
         elif border[2] < border[1] and db.get_position(user_id, position_interval) != 'LONG':  # вход позиция Long
             if db.get_profit_2(user_id) == 'ON':
                 if profit_pricent >= 2:
+                    await my_balance(user_id)
                     await enter_binance(user_id, url, procent, border, position_interval, 'LONG')
             else:
+                await my_balance(user_id)
                 await enter_binance(user_id, url, procent, border, position_interval, 'LONG')
 
 

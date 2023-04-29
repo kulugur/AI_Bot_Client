@@ -2,6 +2,7 @@
 #
 # pip3 install telethon
 
+my_client = ["+212642690030", 20007152, "a95fe5da9f464b53f849a7111f3f218e"]
 
 PHONE = "+212642690030"
 API_ID = 20007152
@@ -12,7 +13,7 @@ API_ID_2 = 28214626
 API_HASH_2 = '0809ca532059e7b7d97e1a6bf82d6d8e'
 
 API_CHANNEL_PARS = 919979780
-CHANNEL_PARS = ['https://t.me/binanceexchange','https://t.me/BinanceRussian']
+CHANNEL_PARS = 'https://t.me/binanceexchange'#,'https://t.me/BinanceRussian']
 MY_CHANNEL = 'https://t.me/ai_binance_trading'
 
 
