@@ -4,11 +4,12 @@ import time
 from config import *
 from aiogram import Bot, Dispatcher, executor, types
 from google.oauth2.credentials import Credentials
-from hendlers_fun import position, my_balance
+from hendlers_fun import position, my_balance, averaging, buy, sell
 import markups as nav
 from gmail import get_gmail_transfer
 from binance.um_futures import UMFutures
-from my_binance import balance_binance, get_position, histori_traid
+from my_binance import balance_binance, get_position, histori_traid, pay_transaction
+
 
 from binance.error import ClientError
 admin = [871610428]
@@ -100,6 +101,7 @@ async def start(message: types.Message):
 async def start_admin(message: types.Message):
 
     db.set_signup(message.from_user.id, 'admin')
+    await bot.send_message(message.from_user.id, 'The trading bot is here', reply_markup=nav.bot_link)
 
 
     await bot.send_message(message.from_user.id, 'admin', reply_markup=nav.admin_Menu)
@@ -140,8 +142,33 @@ async def all_user(message: types.Message):
 async def start(message: types.Message):
 
     if(not db.user_exists(message.from_user.id)):
-        db.add_user(message.from_user.id)
-        await bot.send_message(871610428, f'новый пользовател {message.from_user.id}\n {message.from_user.mention}')
+        start_comand = message.text
+        referens_id = str(start_comand[7:])
+        if referens_id != '':
+            if referens_id != str(message.from_user.id):
+                db.add_user(message.from_user.id, referens_id)
+                try:
+                    await bot.send_message(871610428,
+                                           f'новый пользовател {message.from_user.id}\n {message.from_user.mention}\nReferral: {referens_id}')
+                    if db.get_language(message.from_user.id) == 'rus':
+                        await bot.send_message(referens_id,
+                                               f'Новый пользователь зарегистрировался по вашей ссылке\n {message.from_user.mention}')
+                    else:
+                        await bot.send_message(referens_id,
+                                               f'New user registered using your link\n {message.from_user.mention}')
+                    deposit = db.get_deposit_demo(referens_id)
+                    await bot.send_message(referens_id,
+                                           f'{deposit} + 0.5 USDT')
+                    deposit += 0.5
+                    db.set_deposit_demo(referens_id, deposit)
+
+
+                except:
+                    pass
+
+        else:
+            db.add_user(message.from_user.id)
+            await bot.send_message(871610428, f'новый пользовател {message.from_user.id}\n {message.from_user.mention}')
         db.set_nickname(message.from_user.id, message.from_user.mention)
         try:
             if message.from_user.locale.language == 'ru':
@@ -162,6 +189,19 @@ async def start(message: types.Message):
         else:
             await bot.send_message(message.from_user.id, 'Главное меню!', reply_markup=nav.mainMenu)
 
+@dp.message_handler(content_types=['photo'])
+async def bot_image(message: types):
+    if db.get_signup(message.from_user.id) == 'Support':
+        for i, photo in enumerate(message.photo):
+            try:
+                await bot.send_message(871610428, text=f'Support\nuser_id: {message.from_user.id}\n\n{message.text}')
+                await bot.send_photo(chat_id=871610428,  photo=photo['file_id'])
+                await bot.send_message(message.from_user.id, 'Message sent to support')
+                break
+            except:
+                pass
+
+
 @dp.message_handler()
 async def bot_masege(message: types.Message):
     if message.chat.type == 'private':
@@ -177,14 +217,16 @@ async def bot_masege(message: types.Message):
             deposit = db.get_deposit_demo(message.from_user.id)
             subscription = db.get_subscription(message.from_user.id)
             wallet = db.get_wallet(message.from_user.id)
+            ref_link = f'{nick_bot}?start={message.from_user.id}'
+            my_ref = db.set_referals(message.from_user.id)
 
             if db.get_language(message.from_user.id) == 'eng':
                 await bot.send_message(message.from_user.id,
-                                       f'User_id: {message.from_user.id}\nNickname: {nicname}\nWallet {wallet}\nYour subscription: {subscription}\nBinance_api: {binance_api}\nDeposit: {deposit} USDT ')
+                                       f'User_id: {message.from_user.id}\nNickname: {nicname}\nWallet {wallet}\nYour subscription: {subscription}\nBinance_api: {binance_api}\nDeposit: {deposit} USDT\nReferral link: {ref_link}\nMy referrals: {my_ref}')
 
             else:
                 await bot.send_message(message.from_user.id,
-                                       f'User_id: {message.from_user.id}\nНик: {nicname}\nКошелек {wallet}\nВаша подписка: {subscription}\nBinance_api: {binance_api}\nDeposit: {deposit} USDT')
+                                       f'User_id: {message.from_user.id}\nНик: {nicname}\nКошелек {wallet}\nВаша подписка: {subscription}\nBinance_api: {binance_api}\nDeposit: {deposit} USDT\nРеферальная ссылка: {ref_link}\nМои рефералы: {my_ref}')
         elif db.get_signup(message.from_user.id) == 'Is_ban':
 
             if db.get_language(message.from_user.id) == 'ru':
@@ -197,25 +239,88 @@ async def bot_masege(message: types.Message):
                 db.set_signup(message.from_user.id, 'none')
                 db.set_id_help(message.from_user.id,0)
                 await bot.send_message(message.from_user.id, '👣', reply_markup=nav.mainMenu)
+
+
+            elif message.text == 'Enter_position':
+                await bot.send_message(message.from_user.id, 'Enter_position', reply_markup=nav.btn_enter_position)
+            elif message.text == 'Buy':
+                user_id = db.get_id_help(message.from_user.id)
+                await buy(user_id)
+            elif message.text == 'Sell':
+                user_id = db.get_id_help(message.from_user.id)
+                await sell(user_id)
+            elif message.text == 'Averaging':
+                user_id = db.get_id_help(message.from_user.id)
+                positino = await averaging(user_id)
+                await bot.send_message(message.from_user.id, positino)
+
+            elif message.text == 'Admin_info':
+                user_id = db.get_id_help(message.from_user.id)
+                positon_user = get_position(db.get_api_key(user_id), db.get_secret_key(user_id))
+                histori_user = histori_traid(db.get_api_key(user_id), db.get_secret_key(user_id))
+                balane_user = balance_binance(db.get_api_key(user_id), db.get_secret_key(user_id))
+                i = len(histori_user) - 20
+                for histori in histori_user[i:]:
+                    await bot.send_message(message.from_user.id,
+                                           f'{histori["symbol"]} {histori["side"]} \n{histori["price"]} {histori["qty"]}\nPNL: {histori["realizedPnl"]}')
+                await bot.send_message(message.from_user.id,
+                                       f'{positon_user[0]}\nMarketPrice: {positon_user[5]}\nEntry Price: {positon_user[1]}\nSize: {positon_user[2]}\nPNL: {positon_user[3]}\nBalance: {balane_user}')
+                try:
+                    f = open(f'user_csv/{user_id}.csv', "rb")
+                    await bot.send_document(message.from_user.id, f)
+                except FileNotFoundError:
+                    await bot.send_message(message.from_user.id, text=f'File Not Found Error')
             elif message.text == 'Subscription':
                 await bot.send_message(message.from_user.id, f'{db.get_subscription(db.get_id_help(message.from_user.id))}', reply_markup=nav.admin_sub)
             elif message.text == 'Ban':
                 db.set_signup(db.get_id_help(message.from_user.id), 'Is_ban')
+                del_user_js(db.get_id_help(message.from_user.id))
             elif message.text == "None":
                 db.set_subscription(db.get_id_help(message.from_user.id), "None")
-                await bot.send_message(message.from_user.id,'Подписка изменена', reply_markup=nav.admin_Menu)
+                if db.get_language(db.get_id_help(message.from_user.id)) == 'ru':
+                    await bot.send_message(message.from_user.id,'Подписка изменена None', reply_markup=nav.admin_Menu)
+                    await bot.send_message(db.get_id_help(message.from_user.id),
+                                           'Ваша подписка изменена на None!')
+
+                else:
+                    await bot.send_message(message.from_user.id,'subscription has been changed to None', reply_markup=nav.admin_Menu)
+                    await bot.send_message(db.get_id_help(message.from_user.id), 'Your subscription has been changed to None!')
+
+
+
             elif message.text == "Lite":
                 db.set_subscription(db.get_id_help(message.from_user.id), "Lite")
-                await bot.send_message(message.from_user.id, 'Подписка изменена', reply_markup=nav.admin_Menu)
+                if db.get_language(db.get_id_help(message.from_user.id)) == 'ru':
+                    await bot.send_message(message.from_user.id, 'Подписка изменена Lite', reply_markup=nav.admin_Menu)
+                    await bot.send_message(db.get_id_help(message.from_user.id),
+                                           'Ваша подписка изменена на Lite!')
+
+                else:
+                    await bot.send_message(message.from_user.id, 'subscription has been changed to Lite',
+                                           reply_markup=nav.admin_Menu)
+                    await bot.send_message(db.get_id_help(message.from_user.id),
+                                           'Your subscription has been changed to Lite!')
+
             elif message.text == "Optimum":
                 db.set_subscription(db.get_id_help(message.from_user.id), "Optimum")
-                await bot.send_message(message.from_user.id, 'Подписка изменена', reply_markup=nav.admin_Menu)
+                if db.get_language(db.get_id_help(message.from_user.id)) == 'ru':
+                    await bot.send_message(message.from_user.id, 'Подписка изменена Optimum', reply_markup=nav.admin_Menu)
+                    await bot.send_message(db.get_id_help(message.from_user.id),
+                                           'Ваша подписка изменена на Optimum!')
+
+                else:
+                    await bot.send_message(message.from_user.id, 'subscription has been changed to Optimum',
+                                           reply_markup=nav.admin_Menu)
+                    await bot.send_message(db.get_id_help(message.from_user.id),
+                                           'Your subscription has been changed to Optimum!')
+
             elif message.text == 'Найти по ID':
                 await bot.send_message(message.from_user.id, 'Enter ID')
                 db.set_signup(message.from_user.id, 'admin_id')
                 db.set_id_help(message.from_user.id,message.text)
             elif message.text == 'Admin_Support':
                 db.set_signup(message.from_user.id, 'admin_support')
+                await bot.send_message(message.from_user.id, f'{db.get_user(db.get_id_help(message.from_user.id))}')
                 await bot.send_message(message.from_user.id,'Support', reply_markup=nav.btn_support)
 
             elif message.text == 'Balance':
@@ -241,7 +346,8 @@ async def bot_masege(message: types.Message):
                 await bot.send_message(message.from_user.id, '👣', reply_markup=nav.admin_Menu)
         elif db.get_signup(message.from_user.id) == 'admin_id':
             db.set_id_help(message.from_user.id, message.text)
-            await bot.send_message(message.from_user.id, f'{db.get_user(message.text)}')
+            user_res = db.get_user(message.text)
+            await bot.send_message(message.from_user.id, f'Номер: {user_res[0]}\nID: {user_res[1]}\nИмя: {user_res[2]} \nСтатус: {user_res[4]}\nПодписка: {user_res[5]} \nБаланс: {user_res[26]}\n{user_res[19]}*{user_res[20]}*{user_res[21]}*{user_res[22]}*{user_res[24]}*{user_res[25]}\nПлечо: {user_res[29]}Х')
             db.set_signup(message.from_user.id, 'admin')
 
         elif db.get_signup(message.from_user.id) == 'admin_support':
@@ -266,6 +372,7 @@ async def bot_masege(message: types.Message):
             else:
                 await bot.send_message(message.from_user.id, '📲\nSend a message to support', reply_markup=nav.btn_support)
         elif db.get_signup(message.from_user.id) == 'Support':
+
             if message.text == 'Exit':
                 db.set_signup(message.from_user.id, 'none')
                 if db.get_language(message.from_user.id) == 'ru':
@@ -275,7 +382,8 @@ async def bot_masege(message: types.Message):
                 else:
                     await bot.send_message(message.from_user.id,'👣', reply_markup=nav.eng_mainMenu)
             else:
-                await bot.send_message(871610428, text=f'Support\nuser_id: {message.from_user.id}\n\n{message.text}')
+                await bot.send_message(871610428, text=f'Support\nuser_id: {message.from_user.id}\n/admin\n{message.text}')
+
                 await bot.send_message(message.from_user.id, 'Message sent to support')
 
 
@@ -315,11 +423,11 @@ async def bot_masege(message: types.Message):
                 await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
                 if db.get_language(message.from_user.id) == 'eng':
                     await bot.send_message(message.from_user.id,
-                                           f'USDT\nAfter payment, click paid, after confirming the transaction, The balance will be replenished.\nUSDT Pay ID wallet: 210914309', reply_markup=nav.eng_puyMenu_optimum)
+                                           f'USDT\nAfter payment, click paid, after confirming the transaction, The balance will be replenished.\nUSDT Pay ID wallet: 210914309', reply_markup=nav.eng_puyMenu)
                 else:
                     await bot.send_message(message.from_user.id,
-                                           f'USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции Баланс будет пополнен.\nКошелек USDT Pay ID: 210914309', reply_markup=nav.puyMenu_optimum)
-                await bot.send_message(message.from_user.id, '\n210914309')
+                                           f'USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции Баланс будет пополнен.\nКошелек USDT Pay ID: 210914309', reply_markup=nav.puyMenu_Ok)
+
 
         elif message.text == 'ℹ️Инфо' or  message.text == 'ℹ️Info':
             await bot.send_message(message.from_user.id, 'ℹ️')
@@ -327,6 +435,8 @@ async def bot_masege(message: types.Message):
             timeSub = db.get_time_sub(message.from_user.id)
             subscription = db.get_subscription(message.from_user.id)
             wallet = db.get_wallet(message.from_user.id)
+            video = open('video/QuickStart.mp4', 'rb')
+
             if db.get_api_key(message.from_user.id) != None and db.get_secret_key(message.from_user.id) != None:
                 binance_api = 'Yes'
             else:
@@ -334,10 +444,14 @@ async def bot_masege(message: types.Message):
             if db.get_language(message.from_user.id) == 'eng':
                 await bot.send_message(message.from_user.id,
                                        f'User_id: {message.from_user.id}\nNickname: {nicname}\nWallet: {wallet}\nBinance_api: {binance_api}\nYour subscription: {subscription}\nLeft: {timeSub} days\nMain group:https://t.me/ai_binance_trading\nDevelopment support: https://t.me/+VWFxrDjnK59kMTM6')
-
+                await bot.send_message(message.from_user.id, '\nVideo loading quick start!')
+                await bot.send_video(message.from_user.id, video)
             else:
                 await bot.send_message(message.from_user.id,
-                                       f'User_id: {message.from_user.id}\nНик: {nicname}\nКошелек: {wallet}\nBinance_api: {binance_api}\nВаша подписка: {subscription}\nОсталось: {timeSub} дней\nГлавная группа:https://t.me/ai_binance_trading\nРазработка поддержка: https://t.me/ai_trade_rus')
+                                       f'User_id: {message.from_user.id}\nНик: {nicname}\nКошелек: {wallet}\nBinance_api: {binance_api}\nВаша подписка: {subscription}\nОсталось: {timeSub} дней\nГлавная группа:https://t.me/ai_binance_trading\nРазработка поддержка: https://t.me/ai_trade_rus\nИдёт загрузка видео быстрый старт!')
+                await bot.send_message(message.from_user.id,'\nИдёт загрузка видео быстрый старт!')
+                await bot.send_video(message.from_user.id, video)
+
         elif  db.get_subscription(message.from_user.id) == "None" and db.get_signup(message.from_user.id) != 'wallet_reg':
             if db.get_language(message.from_user.id) == 'eng':
                 await bot.send_message(message.from_user.id,'✍')
@@ -368,10 +482,10 @@ async def bot_masege(message: types.Message):
         elif message.text == '📈️Торговля' or  message.text == '📈️Trading':
             await bot.send_message(message.from_user.id, '📈️')
             if db.get_language(message.from_user.id) == 'eng':
-                await bot.send_message(message.from_user.id, f'Your subscription {db.get_subscription(message.from_user.id)}\nTo exit to the Main Menu, enter\n/start', reply_markup=nav.eng_tradingMenu)
+                await bot.send_message(message.from_user.id, f'Your subscription {db.get_subscription(message.from_user.id)}\nTo exit to the Main Menu, enter 👣Back', reply_markup=nav.eng_tradingMenu)
 
             else:
-                await bot.send_message(message.from_user.id, f'Ваша подписка {db.get_subscription(message.from_user.id)}\nДля возврата нажмите /start', reply_markup=nav.tradingMenu)
+                await bot.send_message(message.from_user.id, f'Ваша подписка {db.get_subscription(message.from_user.id)}\nДля возврата нажмите 👣Back', reply_markup=nav.tradingMenu)
 
 
 
@@ -384,7 +498,12 @@ async def bot_masege(message: types.Message):
 
             t = await position(message.from_user.id)
             print(t)
-
+        elif message.text == 'Get Excel':
+            try:
+                f = open(f'user_csv/{message.from_user.id}.csv', "rb")
+                await bot.send_document(message.from_user.id, f)
+            except FileNotFoundError:
+                await bot.send_message(message.from_user.id, text=f'File Not Found Error')
 
         elif message.text == 'Balance':
             await my_balance(message.from_user.id)
@@ -392,16 +511,16 @@ async def bot_masege(message: types.Message):
         elif message.text == 'Last order':
             subscription = db.get_subscription(message.from_user.id)
             if subscription == 'Lite':
-                url = 'https://testnet.binancefuture.com'
+
                 id_key = admin[0]
             else:
-                url = 'https://fapi.binance.com'
+
                 id_key = message.from_user.id
             key = db.get_api_key(id_key)
             secret = db.get_secret_key(id_key)
-            if key != None or secret != None:
+            if key != None or secret != None and subscription != 'Lite' :
                 try:
-                    histori = histori_traid(key, secret, url)[-1]
+                    histori = histori_traid(key, secret)[-1]
                 except:
                     await bot.send_message(message.from_user.id,'Binance API Error', reply_markup= nav.eng_registr)
                 if type(histori) is str:
@@ -432,9 +551,9 @@ async def bot_masege(message: types.Message):
             else:
                 await bot.send_message(message.from_user.id, '*         Усреднение          *', reply_markup=nav.settingAveraging)
             if db.get_language(message.from_user.id) == 'eng':
-                await bot.send_message(message.from_user.id, '*Connection Binance *', reply_markup=nav.settingbinance_traid)
+                await bot.send_message(message.from_user.id, '*         Leverage           *', reply_markup=nav.settingbinance_traid)
             else:
-                await bot.send_message(message.from_user.id, '*Подключить Binance *', reply_markup=nav.settingbinance_traid)
+                await bot.send_message(message.from_user.id, '*    Кредитное плечо   *', reply_markup=nav.settingbinance_traid)
 
 
 
@@ -442,14 +561,12 @@ async def bot_masege(message: types.Message):
         elif message.text == '🏁️Запустить' or  message.text == '🏁️Start':
             await bot.send_message(message.from_user.id, '🏁️')
             if not db.get_start(message.from_user.id):
-                if db.get_subscription(message.from_user.id) != 'Lite':
+                subscript = db.get_subscription(message.from_user.id)
+                if subscript != 'Lite':
                     try:
                         await my_balance(message.from_user.id)
-                        if message.from_user.id == tg_chanel_user:
-                            url = 'https://testnet.binancefuture.com'
-                        else:
-                            url = 'https://api.binance.com'
-                        test = balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id), url)
+
+                        test = balance_binance(db.get_api_key(message.from_user.id), db.get_secret_key(message.from_user.id))
                     except:
                         test = 'error'
                     if test == 'error':
@@ -461,18 +578,16 @@ async def bot_masege(message: types.Message):
                             await bot.send_message(message.from_user.id,f'Ошибка подключения к binance')
                     else:
                         db.set_binance_balance(message.from_user.id, test[0])
+                        leverage = db.get_leverage(message.from_user.id)
+                        if leverage == 1.5:
+                            leverage = 'Auto(Standard)'
                         if db.get_language(message.from_user.id) == 'eng':
 
-                            await bot.send_message(message.from_user.id, f'The trading bot is running!\nParameters:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nExchange balance: {db.get_deposit_demo(message.from_user.id)}')
-                        else:
-                            await bot.send_message(message.from_user.id, f'Торговый бот запущен!\nПараметры:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nБаланс биржы: {db.get_deposit_demo(message.from_user.id)}')
-                        db.set_start(message.from_user.id, True)
-                        with open('data.txt') as json_file:
-                            data = json.load(json_file)
-                            data['user_id'].append(message.from_user.id)
 
-                        with open('data.txt', 'w') as outfile:
-                            json.dump(data, outfile)
+                            await bot.send_message(message.from_user.id, f'The trading bot is ready to run Check the settings!\nParameters:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nLeverage: {leverage}\nBot balance: {db.get_deposit_demo(message.from_user.id)}', reply_markup=nav.eng_run_bot)
+                        else:
+                            await bot.send_message(message.from_user.id, f'Торговый бот готов к запуску Проверьте настройки\nПараметры:\nRSI: {db.get_rsi(message.from_user.id)}\nmin profit 2%: {db.get_profit_2(message.from_user.id)}\nAveraging: {db.get_averaging(message.from_user.id)}\nConnection Binance: {db.get_binance_traid(message.from_user.id)}\nКредитное плечо: {leverage}\nБаланс Бот: {db.get_deposit_demo(message.from_user.id)}', reply_markup=nav.eng_run_bot)
+
 
                 else:
                     #db.set_position_balance(message.from_user.id, 0.00000001)
@@ -480,10 +595,10 @@ async def bot_masege(message: types.Message):
 
                     db.set_start(message.from_user.id, True)
                     if db.get_language(message.from_user.id) == 'eng':
-                        await position(message.from_user.id)
-                        await my_balance(message.from_user.id)
+                        await bot.send_message(message.from_user.id, f'The trading bot is running!\nSubscription {subscript}')
                     else:
-                        await position(message.from_user.id)
+                        await bot.send_message(message.from_user.id, f'Торговый бот запущен!\nПодписка  {subscript}')
+
             else:
                 if db.get_language(message.from_user.id) == 'eng':
                     await bot.send_message(message.from_user.id, 'The trading bot is already running! ')
@@ -520,18 +635,11 @@ async def bot_masege(message: types.Message):
 
                     if db.get_language(message.from_user.id) == 'eng':
                         await bot.send_message(message.from_user.id, f'Trading Bot stopped!')
-                        await my_balance(message.from_user.id)
+
                     else:
                         await bot.send_message(message.from_user.id, f'Торговый бот остановлен!')
-                        await my_balance(message.from_user.id)
-                    # set_position_js(message.from_user.id,'close', True)
-                    # time.sleep(10)
-                    # db.set_position(message.from_user.id, 'position_1m', 'non')
-                    # db.set_position(message.from_user.id, 'position_5m', 'non')
-                    # db.set_position(message.from_user.id, 'position_15m','non')
-                    # db.set_position(message.from_user.id, 'position_30m', 'non')
-                    # db.set_position(message.from_user.id, 'position_1h', 'non')
-                    # db.set_position(message.from_user.id, 'position_4h', 'non')
+
+
                     del_user_js(message.from_user.id)
                     db.set_start(message.from_user.id, False)
 
@@ -598,6 +706,16 @@ async def bot_masege(message: types.Message):
 #         pass
 #     elif message.text == '⚙️Настройки':
 #         pass
+@dp.callback_query_handler(text='run_bot')
+async def run_bot(message: types.Message):
+    db.set_start(message.from_user.id, True)
+    with open('data.txt') as json_file:
+        data = json.load(json_file)
+        data['user_id'].append(message.from_user.id)
+
+    with open('data.txt', 'w') as outfile:
+        json.dump(data, outfile)
+    await bot.send_message(message.from_user.id, 'Trading bot launched')
 @dp.callback_query_handler(text='Tester_sub')
 async def Tester_sub(message: types.Message):
     if db.get_language(message.from_user.id) == 'eng':
@@ -608,21 +726,25 @@ async def Tester_sub(message: types.Message):
 @dp.callback_query_handler(text='Light_sub')
 async def Light_sub(message: types.Message):
     if db.get_language(message.from_user.id) == 'eng':
-        await bot.send_message(message.from_user.id, f'Subscription Lite\nDemo account available\nWithout connecting a wallet Binance', reply_markup=nav.sub_inlain_Light)
+        await bot.send_message(message.from_user.id, f'Subscription Lite\nWithout connecting a wallet Binance\nprice Free.', reply_markup=nav.sub_inlain_Light)
     else:
-        await bot.send_message(message.from_user.id, 'Подписка Лайт\nДоступен демо-счёт\nбез подключения кошелька Binance\nцена 5 доллар идет на ваш депозит  боту.', reply_markup=nav.sub_inlain_Light)
+        await bot.send_message(message.from_user.id, 'Подписка Лайт\nбез подключения кошелька Binance\nцена бесплатно.', reply_markup=nav.sub_inlain_Light)
 @dp.callback_query_handler(text='Optimum_sub')
 async def Optimum_sub(message: types.Message):
     if db.get_language(message.from_user.id) == 'eng':
-        await bot.send_message(message.from_user.id, f'Binance wallet connection\navailable with Optimum\nsubscriptionthe price of 15 dollar goes to your deposit to the bot.\nBot commission 15% of your profit!', reply_markup=nav.sub_inlain_Optimum)
+        await bot.send_message(message.from_user.id, f'Binance wallet connection\navailable with Optimum\nsubscriptionthe price of 15 USDT.\nBot commission 15% of your profit!', reply_markup=nav.sub_inlain_Optimum)
     else:
-        await bot.send_message(message.from_user.id, 'Подключение кошелька Binance\nдоступно с подпиской Optimum\nцена 15 доллар идет на ваш депозит  боту.\nКомиссия бота 15% от вашей прибыли!', reply_markup=nav.sub_inlain_Optimum)
+        await bot.send_message(message.from_user.id, 'Подключение кошелька Binance\nдоступно с подпиской Optimum\nцена 15 USDT и.\nКомиссия бота 15% от вашей прибыли!', reply_markup=nav.sub_inlain_Optimum)
 @dp.callback_query_handler(text='Premium_sub')
 async def Premium_sub(message: types.Message):
     if db.get_language(message.from_user.id) == 'eng':
-        await bot.send_message(message.from_user.id, f'Subscription not available, testing in progress')
+        await bot.send_message(message.from_user.id,
+                               f'Binance wallet connection\navailable with Premium\nsubscriptionthe price of 30 USDT.\nBot commission 15% of your profit!',
+                               reply_markup=nav.sub_inlain_Premium)
     else:
-        await bot.send_message(message.from_user.id, 'Подписка недоступна, идёт тестирование')
+        await bot.send_message(message.from_user.id,
+                               'Подключение кошелька Binance\nдоступно с подпиской Premium\nцена 30 USDT \nКомиссия бота 15% от вашей прибыли!',
+                               reply_markup=nav.sub_inlain_Premium)
 @dp.callback_query_handler(text='Tester_sub')
 async def Tester_sub(message: types.Message):
     if db.get_language(message.from_user.id) == 'eng':
@@ -662,24 +784,33 @@ async def Light(message: types.Message):
             await bot.send_message(message.from_user.id, f'You already have a subscription {subscription}')
         else:
             await bot.send_message(message.from_user.id, f'У вас уже подключена подписка {subscription}')
-    elif db.get_wallet(message.from_user.id) == None:
+    elif subscription == 'Optimum':
         if db.get_language(message.from_user.id) == 'eng':
-            await bot.send_message(message.from_user.id, 'Register your Binance Pay for payment',
-                                   reply_markup=nav.eng_registr)
+            await bot.send_message(message.from_user.id, f'You already have a subscription {subscription}')
         else:
-            await bot.send_message(message.from_user.id, 'Зарегистрируйте свой Binance Pay для оплаты',
-                                   reply_markup=nav.eng_registr)
+            await bot.send_message(message.from_user.id, f'У вас уже подключена подписка {subscription}')
+
+
     else:
-        media = types.MediaGroup()
-        media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-53.jpg', 'Pay_ID'))
-        await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
+        db.set_subscription(message.from_user.id, 'Lite')
         if db.get_language(message.from_user.id) == 'eng':
-            await bot.send_message(message.from_user.id,
-                                   f'To activate the Lite subscription\nMake a payment to the Pay ID wallet\n5 USDT\nAfter payment, click paid, after confirming the transaction, the package will be connected.\nUSDT Pay ID wallet: 210914309', reply_markup=nav.eng_puyMenu_optimum)
+            await bot.send_message(message.from_user.id, 'Your subscription has been changed to Lite')
         else:
-            await bot.send_message(message.from_user.id,
-                                   f'Для подключения подписки Lite\nПроизведите оплату на кошелек Pay ID\n5 USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции пакет будет подключен.\nКошелек USDT Pay ID: 210914309', reply_markup=nav.puyMenu_optimum)
-        await bot.send_message(message.from_user.id, '\n210914309')
+            await bot.send_message(message.from_user.id, 'Ваша подписка изменено на lite')
+        # else:
+        #     media = types.MediaGroup()
+        #     media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-53.jpg', 'Pay_ID'))
+        #     await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
+        #     if db.get_language(message.from_user.id) == 'eng':
+        #         await bot.send_message(message.from_user.id,
+        #                                    f'Your balance: {db.get_deposit_demo(message.from_user.id)}\nAfter payment, click paid, after confirming the transaction, The balance will be replenished.\nUSDT Pay ID wallet: 210914309',
+        #                                    reply_markup=nav.eng_puyMenu)
+        #     else:
+        #         await bot.send_message(message.from_user.id,
+        #                                    f'Ваш баланс: {db.get_deposit_demo(message.from_user.id)} USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции Баланс будет пополнен.\nКошелек USDT Pay ID: 210914309',
+        #                                    reply_markup=nav.puyMenu_Ok)
+
+
 
 
 @dp.callback_query_handler(text='Optimum')
@@ -696,16 +827,29 @@ async def Optimum(message: types.Message):
         else:
             await bot.send_message(message.from_user.id, 'Зарегистрируйте свой Binance Pay для оплаты', reply_markup=nav.eng_registr)
     else:
-        media = types.MediaGroup()
-        media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-53.jpg', 'Pay_ID'))
-        await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
-        if db.get_language(message.from_user.id) == 'eng':
-            await bot.send_message(message.from_user.id,
-                                   f'To activate the Optimum subscription\nMake a payment to the Pay ID wallet\n15 USDT\nAfter payment, click paid, after confirming the transaction, the package will be connected.\nUSDT Pay ID wallet: 210914309', reply_markup=nav.eng_puyMenu_optimum)
+        if db.get_deposit_demo(message.from_user.id) >= 15:
+            deposit = db.get_deposit_demo(message.from_user.id) - 15
+            db.set_deposit_demo(message.from_user.id, deposit)
+            db.set_subscription(message.from_user.id,'Optimum')
+            if db.get_language(message.from_user.id) == 'eng':
+                await bot.send_message(message.from_user.id,
+                                       f'Your subscription has been changed to Optimum\nBot balance: {db.get_deposit_demo(message.from_user.id)}$')
+            else:
+
+                await bot.send_message(message.from_user.id,
+                                       f'Ваша подписка изменено на Optimum\nБаланс бота: {db.get_deposit_demo(message.from_user.id)}$')
         else:
-            await bot.send_message(message.from_user.id,
-                               f'Для подключения подписки Optimum\nПроизведите оплату на кошелек Pay ID\n15 USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции пакет будет подключен.\nКошелек USDT Pay ID: 210914309', reply_markup=nav.puyMenu_optimum)
-        await bot.send_message(message.from_user.id, '\n210914309')
+            media = types.MediaGroup()
+            media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-53.jpg', 'Pay_ID'))
+            await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
+            if db.get_language(message.from_user.id) == 'eng':
+                await bot.send_message(message.from_user.id,
+                                       f'Your balance: {db.get_deposit_demo(message.from_user.id)} USDT\nAfter payment, click paid, after confirming the transaction, The balance will be replenished.\nUSDT Pay ID wallet: 210914309',
+                                       reply_markup=nav.eng_puyMenu)
+            else:
+                await bot.send_message(message.from_user.id,
+                                       f'Ваш баланс: {db.get_deposit_demo(message.from_user.id)} USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции Баланс будет пополнен.\nКошелек USDT Pay ID: 210914309',
+                                       reply_markup=nav.puyMenu_Ok)
 
 
 @dp.callback_query_handler(text='Premium')
@@ -718,21 +862,37 @@ async def Premium(message: types.Message):
             await bot.send_message(message.from_user.id, f'У вас уже подключена подписка {subscription}')
     elif db.get_wallet(message.from_user.id) == None:
         if db.get_language(message.from_user.id) == 'eng':
-            await bot.send_message(message.from_user.id, 'Register your wallet for payment', reply_markup=nav.eng_puyRegWallet)
+            await bot.send_message(message.from_user.id, 'Register your Binance Pay for payment',
+                                   reply_markup=nav.eng_registr)
         else:
-            await bot.send_message(message.from_user.id, 'Зарегистрируйте свой кошелёк для оплаты', reply_markup=nav.puyRegWallet)
+            await bot.send_message(message.from_user.id, 'Зарегистрируйте свой Binance Pay для оплаты',
+                                   reply_markup=nav.eng_registr)
     else:
-        if db.get_language(message.from_user.id) == 'eng':
-            await bot.send_message(message.from_user.id,
-                                   f'To connect a subscription for 1 month Premium\nMake a payment to a cryptocurrency wallet\n5 USDT\nAfter payment, click paid, after confirming the transaction, the package will be connected.\nUSDT Tron Wallet (TRC20)')
+        if db.get_deposit_demo(message.from_user.id) >= 30:
+            deposit = db.get_deposit_demo(message.from_user.id) - 30
+            db.set_deposit_demo(message.from_user.id, deposit)
+            db.set_subscription(message.from_user.id, 'Premium')
+            if db.get_language(message.from_user.id) == 'eng':
+                await bot.send_message(message.from_user.id, f'Your subscription has been changed to Premium\nBot balance: {db.get_deposit_demo(message.from_user.id)}$')
+            else:
+
+                await bot.send_message(message.from_user.id, f'Ваша подписка изменено на Premium\nБаланс бота: {db.get_deposit_demo(message.from_user.id)}$')
         else:
-            await bot.send_message(message.from_user.id,
-                               f'Для подключения подписки на 1 месяц Premium\nПроизведите оплату на криптовалютный кошелек\n50 USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции пакет будет подключен.\nКошелек USDT Tron (TRC20)')
-        await bot.send_message(message.from_user.id, '\nTSphipuArumtab7EnVHYspUD3bxyLBtaAq', reply_markup=nav.puyMenu_premium)
+            media = types.MediaGroup()
+            media.attach_photo(types.InputFile('image/photo_2023-04-09_17-38-53.jpg', 'Pay_ID'))
+            await bot.send_media_group(message.from_user.id, media=media)  # Отправка фото
+            if db.get_language(message.from_user.id) == 'eng':
+                await bot.send_message(message.from_user.id,
+                                       f'Your balance: {db.get_deposit_demo(message.from_user.id)} USDT\nAfter payment, click paid, after confirming the transaction, The balance will be replenished.\nUSDT Pay ID wallet: 210914309',
+                                       reply_markup=nav.eng_puyMenu)
+            else:
+                await bot.send_message(message.from_user.id,
+                                       f'Ваш баланс: {db.get_deposit_demo(message.from_user.id)} USDT\nПосле оплаты нажмите оплатил, после подтверждения транзакции Баланс будет пополнен.\nКошелек USDT Pay ID: 210914309',
+                                       reply_markup=nav.puyMenu_Ok)
 
 @dp.callback_query_handler(text='PuyOk_premium')
 async def PuyOk_premium(message: types.Message):
-    db.set_payment(message.from_user.id, 'yes')
+
     db.set_subscription(message.from_user.id, 'Premium')
     if db.get_language(message.from_user.id) == 'eng':
         await bot.send_message(message.from_user.id, f'Your subscription has been changed to Premium')
@@ -740,12 +900,37 @@ async def PuyOk_premium(message: types.Message):
         await bot.send_message(message.from_user.id, f'Ваша подписка изменена на Premium')
 
 
+@dp.callback_query_handler(text='PuyOk')
+async def PuyOk(message: types.Message):
+    key = 'CCW3X4P0vvL3PWpQdN0ZUiivCSTvEuU6Xl6m5UkCHP75oxc0bHKyN9viNnQhzH0M'
+    secret = 'EnWsq6BhNIUagMUA5PmmAa1Ea3r2WfB8VhZCwIzmEx6O8MmASwOpRbvOOd02g4S3'
+    pay = pay_transaction(key, secret, db.get_wallet(message.from_user.id))
+    await bot.send_message(admin[0],
+                           f'Ожидаем подтверждение транзакций от\n{message.from_user.id}')
+    if pay[0] != str(db.get_payment(message.from_user.id)):
+        db.set_payment(message.from_user.id,pay[0])
+        deposit = db.get_deposit_demo(message.from_user.id) + float(pay[1])
+        db.set_deposit_demo(message.from_user.id, deposit)
+        if db.get_language(message.from_user.id) == 'eng':
+            await bot.send_message(message.from_user.id,
+                                   f'Replenishment of balance.\ndeposit: {deposit}')
 
+        else:
+            await bot.send_message(message.from_user.id,
+                                   f'Пополнение баланса.\nДепозит{deposit}')
+    else:
+        if db.get_language(message.from_user.id) == 'eng':
+            await bot.send_message(message.from_user.id,
+                                   f'Waiting for transaction confirmation')
+
+        else:
+            await bot.send_message(message.from_user.id,
+                                   f'Ожидаем подтверждение транзакций')
 
 
 @dp.callback_query_handler(text='PuyOk_optimum')
 async def PuyOk_optimum(message: types.Message):
-    get_gmail_transfer()
+
     if db.get_language(message.from_user.id) == 'eng':
         await bot.send_message(message.from_user.id,
                            f'Waiting for transaction confirmation')
@@ -756,13 +941,11 @@ async def PuyOk_optimum(message: types.Message):
 
 
 
-@dp.callback_query_handler(text='PuyClose_lait_optimum')
-async def PuyClose__optimum(message: types.Message):
-    db.set_payment(message.from_user.id, 'no')
+
 
 @dp.callback_query_handler(text='PuyOk_lait')
 async def PuyOk_lait(message: types.Message):
-    db.set_payment(message.from_user.id, 'yes')
+
     db.set_subscription(message.from_user.id, 'Lite')
     if db.get_language(message.from_user.id) == 'eng':
         await bot.send_message(message.from_user.id, f'Your subscription has been changed to Lite')
@@ -831,36 +1014,116 @@ async def RsiNo(callback: types.CallbackQuery):
             await callback.answer('Нужена Premium подписка')
 
 #********************
-@dp.callback_query_handler(text='binance_traidYes')
-async def binance_traidYes(callback: types.CallbackQuery):
-    subscription =db.get_subscription(callback.from_user.id)
+
+@dp.callback_query_handler(text='Auto(Standard)')
+async def auto_Standard(callback: types.CallbackQuery):
+    subscription = db.get_subscription(callback.from_user.id)
     if subscription == 'Tester' or subscription == 'Premium':
-        db.set_binance_traid(callback.from_user.id, 'ON')
+        db.set_leverage(callback.from_user.id, 1.5)
         if db.get_language(callback.from_user.id) == 'eng':
-            await callback.answer('Connection Binance - ON')
+            await callback.answer('Leverage changed: Auto(Standard)')
+            await bot.send_message(callback.from_user.id, f'Leverage changed: Auto(Standard)\nIncreasing leverage leads to additional risk you balance must be at least $200!')
         else:
-            await callback.answer('Connection Binance - ON')
+            await callback.answer('Кредитное плечо изменено: Auto(Standard)')
+            await bot.send_message(callback.from_user.id,
+                                   f'Кредитное плечо изменено: Auto(Standard)\nУвеличение кредитного плеча приводит к дополнительному риску, ваш баланс должен быть не менее 200 долларов!')
     else:
         if db.get_language(callback.from_user.id) == 'eng':
             await callback.answer('Premium subscription required')
         else:
             await callback.answer('Нужена Premium подписка')
 
-@dp.callback_query_handler(text='binance_traidNo')
-async def binance_traidNo(callback: types.CallbackQuery):
-    subscription =db.get_subscription(callback.from_user.id)
+@dp.callback_query_handler(text='leverage_5x')
+async def leverage_5x(callback: types.CallbackQuery):
+    subscription = db.get_subscription(callback.from_user.id)
     if subscription == 'Tester' or subscription == 'Premium':
-        db.set_binance_traid(callback.from_user.id, 'OFF')
+        db.set_leverage(callback.from_user.id, 5)
         if db.get_language(callback.from_user.id) == 'eng':
-            await callback.answer('Connection Binance - OFF')
+            await callback.answer('Leverage changed: 5X')
+            await bot.send_message(callback.from_user.id, f'Leverage changed: 5X\nIncreasing leverage leads to additional risk you balance must be at least $200!')
         else:
-            await callback.answer('Connection Binance- OFF')
+            await callback.answer('Кредитное плечо изменено: 5X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Кредитное плечо изменено: 5X\nУвеличение кредитного плеча приводит к дополнительному риску, ваш баланс должен быть не менее 200 долларов!')
     else:
         if db.get_language(callback.from_user.id) == 'eng':
             await callback.answer('Premium subscription required')
         else:
             await callback.answer('Нужена Premium подписка')
 
+@dp.callback_query_handler(text='leverage_10x')
+async def leverage_10x(callback: types.CallbackQuery):
+    subscription =db.get_subscription(callback.from_user.id)
+    if subscription == 'Tester' or subscription == 'Premium':
+        db.set_leverage(callback.from_user.id, 10)
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Leverage changed: 10X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Leverage changed: 10X\nIncreasing leverage leads to additional risk you balance must be at least $200!')
+        else:
+            await callback.answer('Кредитное плечо изменено: 10X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Кредитное плечо изменено: 10X\nУвеличение кредитного плеча приводит к дополнительному риску, ваш баланс должен быть не менее 200 долларов!')
+    else:
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Premium subscription required')
+        else:
+            await callback.answer('Нужена Premium подписка')
+@dp.callback_query_handler(text='leverage_15x')
+async def leverage_15x(callback: types.CallbackQuery):
+    subscription =db.get_subscription(callback.from_user.id)
+    if subscription == 'Tester' or subscription == 'Premium':
+        db.set_leverage(callback.from_user.id, 15)
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Leverage changed: 15X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Leverage changed: 15X\nIncreasing leverage leads to additional risk you balance must be at least $200!')
+        else:
+            await callback.answer('Кредитное плечо изменено: 15X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Кредитное плечо изменено: 15X\nУвеличение кредитного плеча приводит к дополнительному риску, ваш баланс должен быть не менее 200 долларов!')
+    else:
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Premium subscription required')
+        else:
+            await callback.answer('Нужена Premium подписка')
+@dp.callback_query_handler(text='leverage_20x')
+async def leverage_20x(callback: types.CallbackQuery):
+    subscription =db.get_subscription(callback.from_user.id)
+    if subscription == 'Tester' or subscription == 'Premium':
+        db.set_leverage(callback.from_user.id, 10)
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Leverage changed: 20X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Leverage changed: 20X\nIncreasing leverage leads to additional risk you balance must be at least $200!')
+        else:
+            await callback.answer('Кредитное плечо изменено: 20X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Кредитное плечо изменено: 20X\nУвеличение кредитного плеча приводит к дополнительному риску, ваш баланс должен быть не менее 200 долларов!')
+
+    else:
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Premium subscription required')
+        else:
+            await callback.answer('Нужена Premium подписка')
+@dp.callback_query_handler(text='leverage_25x')
+async def leverage_25x(callback: types.CallbackQuery):
+    subscription =db.get_subscription(callback.from_user.id)
+    if subscription == 'Tester' or subscription == 'Premium':
+        db.set_leverage(callback.from_user.id, 10)
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Leverage changed: 25X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Leverage changed: 25X\nIncreasing leverage leads to additional risk you balance must be at least $200!')
+        else:
+            await callback.answer('Кредитное плечо изменено: 25X')
+            await bot.send_message(callback.from_user.id,
+                                   f'Кредитное плечо изменено: 25X\nУвеличение кредитного плеча приводит к дополнительному риску, ваш баланс должен быть не менее 200 долларов!')
+    else:
+        if db.get_language(callback.from_user.id) == 'eng':
+            await callback.answer('Premium subscription required')
+        else:
+            await callback.answer('Нужена Premium подписка')
 #********************
 @dp.callback_query_handler(text='averagingYes')
 async def averagingYes(callback: types.CallbackQuery):

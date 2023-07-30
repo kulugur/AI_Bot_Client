@@ -2,7 +2,7 @@
 #
 # pip3 install telethon
 
-my_client = ["+212642690030", 20007152, "a95fe5da9f464b53f849a7111f3f218e"]
+my_client = ["+16478171655",26833491,"91b6696808e79acc7cbc21e6a6a6341a"]
 
 PHONE = "+212642690030"
 API_ID = 20007152

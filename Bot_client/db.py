@@ -5,9 +5,13 @@ class Database:
         self.connection = sqlite3.connect(db_file)
         self.cursor = self.connection.cursor()
 
-    def add_user(self, user_id):
+    def add_user(self, user_id, ref_id=None):
         with self.connection:
-            return self.cursor.execute("INSERT INTO users (user_id) VALUES (?)", (user_id,))
+            if ref_id != None:
+                return self.cursor.execute("INSERT INTO users (user_id, ref_id) VALUES (?,?)", (user_id, ref_id,))
+            else:
+                return self.cursor.execute("INSERT INTO users (user_id) VALUES (?)", (user_id,))
+
     def user_exists(self, user_id):
         with self.connection:
             result = self.cursor.execute("SELECT * FROM users WHERE user_id= ?", (user_id,)).fetchall()
@@ -15,6 +19,9 @@ class Database:
     def set_nickname(self, user_id, nickname ):
         with self.connection:
             return self.cursor.execute("UPDATE users SET nickname=? WHERE user_id=?", (nickname, user_id,))
+    def set_referals(self, user_id):
+        with self.connection:
+            return self.cursor.execute("SELECT COUNT(id) as count FROM users  WHERE ref_id=?", (user_id,)).fetchone()[0]
 
     def set_signup(self, user_id, signup):
         with self.connection:
@@ -71,6 +78,9 @@ class Database:
     def set_position(self, user_id, position_1m, position):
         with self.connection:
             return self.cursor.execute(f"UPDATE users SET {position_1m}=? WHERE user_id=?", (position, user_id,))
+    def set_leverage(self, user_id, leverage):
+        with self.connection:
+            return self.cursor.execute("UPDATE users SET leverage=? WHERE user_id=?", (leverage, user_id,))
 
     def get_signup(self, user_id):
         with self.connection:
@@ -85,10 +95,13 @@ class Database:
     def set_id_help(self, user_id, id_help):
         with self.connection:
             return self.cursor.execute("UPDATE users SET id_help=? WHERE user_id=?", (id_help, user_id,))
-
     def get_deposit_demo(self, user_id):
         with self.connection:
              return self.cursor.execute("SELECT deposit_demo FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
+
+    def get_leverage(self, user_id):
+        with self.connection:
+             return self.cursor.execute("SELECT leverage FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
     def get_id_help(self, user_id):
         with self.connection:
              return self.cursor.execute("SELECT id_help FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
@@ -127,6 +140,9 @@ class Database:
     def get_binance_traid(self, user_id):
         with self.connection:
              return self.cursor.execute("SELECT binance_traid FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
+    def get_binance_balance(self, user_id):
+        with self.connection:
+             return self.cursor.execute("SELECT binance_balance FROM users WHERE user_id=?", (user_id,)).fetchone()[0]
 
     def get_averaging(self, user_id):
         with self.connection:

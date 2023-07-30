@@ -1,4 +1,6 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+
+eng_deposit = KeyboardButton(text='💵️Deposit')
 #RUS
 btn_back = KeyboardButton(text='👣Назад')
 
@@ -9,10 +11,17 @@ admin_back = KeyboardButton(text='👣Return')
 admin_id = KeyboardButton(text='Найти по ID')
 admin_sub = KeyboardButton(text='Subscription')
 admin_balance = KeyboardButton(text='Balance')
+admin_info = KeyboardButton(text='Admin_info')
+enter_position = KeyboardButton(text='Enter_position')
 admin_support = KeyboardButton(text='Admin_Support')
 admin_ban = KeyboardButton(text='Ban')
 admin_Menu = ReplyKeyboardMarkup(resize_keyboard=True)
-admin_Menu.add(admin_id,admin_sub,admin_balance,admin_support, admin_ban, btn_back)
+admin_Menu.add(admin_id,admin_sub,admin_balance,admin_support, admin_info,enter_position, admin_ban, btn_back)
+btn_enter_position = ReplyKeyboardMarkup(resize_keyboard=True)
+admin_buy = KeyboardButton(text='Buy')
+admin_sell = KeyboardButton(text='Sell')
+admin_Averaging = KeyboardButton(text='Averaging')
+btn_enter_position.add(admin_buy, admin_sell, admin_Averaging, admin_back)
 
 admin_sub_liht = KeyboardButton(text='Lite')
 admin_sub_optima = KeyboardButton(text='Optimum')
@@ -45,6 +54,13 @@ btnStop = KeyboardButton('🛑Остановить')
 tradingMenu = ReplyKeyboardMarkup(resize_keyboard=True)
 tradingMenu.add(btnOptions, btnStart, btnStop, btnAdd_commands,btn_back)
 
+btnPuyOk = InlineKeyboardButton(text='💵Оплачено', callback_data='PuyOk')
+puyMenu_Ok = InlineKeyboardMarkup(row_width=1)
+puyMenu_Ok.add(btnPuyOk)
+
+btn_bot_link = InlineKeyboardButton(text='Bot',url='https://t.me/Ai_Trader_client_bot')
+bot_link = InlineKeyboardMarkup(row_width=1)
+bot_link.add(btn_bot_link)
 btnPuyOk_lait = InlineKeyboardButton(text='💵Оплачено', callback_data='PuyOk_lait')
 puyMenu_lait = InlineKeyboardMarkup(row_width=1)
 puyMenu_lait.add(btnPuyOk_lait)
@@ -61,7 +77,7 @@ btnRegWallet = KeyboardButton(text='📝Регистрация')
 btninfo = KeyboardButton(text='ℹ️Инфо')
 
 puyRegWallet = ReplyKeyboardMarkup(resize_keyboard=True)
-puyRegWallet.add(btnRegWallet, btnAdd_commands, btn_back)
+puyRegWallet.add(btnRegWallet, eng_deposit, btn_back)
 
 btnTester = InlineKeyboardButton(text='OK', callback_data='Tester')
 btnLight = InlineKeyboardButton(text='OK', callback_data='Lite')
@@ -93,10 +109,14 @@ btnRsiNo = InlineKeyboardButton(text='No', callback_data='RsiNo')
 settingRSI = InlineKeyboardMarkup(row_width=1)
 settingRSI.row(btnRsiYes, btnRsiNo)
 
-btnbinance_traidYes = InlineKeyboardButton(text='Yes', callback_data='binance_traidYes')
-btnbinance_traidNo = InlineKeyboardButton(text='No', callback_data='binance_traidNo')
+btn_leverage_Auto_Standard = InlineKeyboardButton(text='Auto(Standard)', callback_data='Auto(Standard)')
+btn_leverage_5x = InlineKeyboardButton(text='5x', callback_data='leverage_5x')
+btn_leverage_10x = InlineKeyboardButton(text='10x', callback_data='leverage_10x')
+btn_leverage_15x = InlineKeyboardButton(text='15x', callback_data='leverage_15x')
+btn_leverage_20x = InlineKeyboardButton(text='20x', callback_data='leverage_20x')
+btn_leverage_25x = InlineKeyboardButton(text='25x', callback_data='leverage_25x')
 settingbinance_traid = InlineKeyboardMarkup(row_width=1)
-settingbinance_traid.row(btnbinance_traidYes, btnbinance_traidNo)
+settingbinance_traid.row(btn_leverage_Auto_Standard, btn_leverage_5x, btn_leverage_10x, btn_leverage_15x, btn_leverage_20x, btn_leverage_25x)
 
 btnAveragingYes = InlineKeyboardButton(text='Yes', callback_data='averagingYes')
 btnAveragingNo = InlineKeyboardButton(text='No', callback_data='averagingNo')
@@ -106,6 +126,7 @@ settingAveraging.row(btnAveragingYes, btnAveragingNo)
 
 
 #ENG
+eng_btn_run_bot = KeyboardButton(text='Run Bot')
 eng_btn_back = KeyboardButton(text='👣Back')
 eng_btnProfile = KeyboardButton('👽 Profile')
 eng_btnSub = KeyboardButton('✍️Subscribe')
@@ -123,11 +144,19 @@ eng_btnStop = KeyboardButton('🛑Stop')
 eng_tradingMenu = ReplyKeyboardMarkup(resize_keyboard=True)
 eng_tradingMenu.add(eng_btnOptions, eng_btnStart, eng_btnStop, eng_btnAdd_commands,eng_btn_back)
 
+
 eng_btnPuyOk_light = InlineKeyboardButton(text='💵Paid', callback_data='PuyOk_lait')
 eng_puyMenu_light = InlineKeyboardMarkup(row_width=1)
 eng_puyMenu_light.add(eng_btnPuyOk_light)
 
+eng_btn_run_bot = InlineKeyboardButton(text='Run Bot', callback_data='run_bot')
+eng_run_bot = InlineKeyboardMarkup(row_width=1)
+eng_run_bot.add(eng_btn_run_bot)
 
+
+eng_btnPuyOk = InlineKeyboardButton(text='💵Paid', callback_data='PuyOk')
+eng_puyMenu = InlineKeyboardMarkup(row_width=1)
+eng_puyMenu.add(eng_btnPuyOk)
 
 
 eng_btnPuyOk_optimum = InlineKeyboardButton(text='💵Paid', callback_data='PuyOk_optimum')
@@ -140,7 +169,7 @@ eng_puyMenu_premium.add(eng_btnPuyOk_premium)
 
 eng_btnRegWallet = KeyboardButton(text='📝Registration')
 eng_btninfo = KeyboardButton(text='ℹ️Info')
-eng_deposit = KeyboardButton(text='💵️Deposit')
+
 eng_puyRegWallet = ReplyKeyboardMarkup(resize_keyboard=True)
 eng_puyRegWallet.add(eng_btnRegWallet, eng_deposit, eng_btn_back)
 
@@ -153,8 +182,9 @@ eng_registr.add(eng_reg_wallet, eng_reg_api,eng_reg_nickname)
 eng_get_position = KeyboardButton(text='Position')
 eng_get_balance = KeyboardButton(text='Balance')
 eng_get_order = KeyboardButton(text='Last order')
+eng_get_excel = KeyboardButton(text='Get Excel')
 eng_addParam = ReplyKeyboardMarkup(resize_keyboard=True)
-eng_addParam.add(eng_get_position, eng_get_balance, eng_get_order, eng_btn_back)
+eng_addParam.add(eng_get_position, eng_get_balance, eng_get_order, eng_get_excel, eng_btn_back)
 
 
 
